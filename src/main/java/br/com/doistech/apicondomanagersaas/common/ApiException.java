@@ -1,0 +1,20 @@
+package br.com.doistech.apicondomanagersaas.common;
+
+import org.springframework.http.HttpStatus;
+
+/**
+ * Exceção simples para padronizar erros de negócio e retornar HTTP adequado.
+ */
+public class ApiException extends RuntimeException {
+
+    private final HttpStatus status;
+
+    public ApiException(HttpStatus status, String message) {
+        super(message);
+        this.status = status;
+    }
+
+    public HttpStatus getStatus() {
+        return status;
+    }
+}
