@@ -3,9 +3,10 @@ package br.com.doistech.apicondomanagersaas.mapper;
 import br.com.doistech.apicondomanagersaas.domain.unidade.Unidade;
 import br.com.doistech.apicondomanagersaas.dto.unidade.UnidadeResponse;
 import org.mapstruct.Mapper;
+import org.mapstruct.MapperConfig;
 import org.mapstruct.Mapping;
 
-@Mapper(config = MapperConfig.class)
+@Mapper(componentModel = "spring")
 public interface UnidadeMapper {
 
     @Mapping(target = "condominioId", source = "condominio.id")
