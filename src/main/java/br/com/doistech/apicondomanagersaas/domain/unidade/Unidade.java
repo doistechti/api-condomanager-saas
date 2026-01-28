@@ -36,6 +36,9 @@ public class Unidade {
 
     private String descricao;
 
+    @Column(nullable = false)
+    private Boolean ativo = true;
+
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 }

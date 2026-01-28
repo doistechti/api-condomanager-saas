@@ -3,6 +3,7 @@ package br.com.doistech.apicondomanagersaas.config;
 import br.com.doistech.apicondomanagersaas.security.JwtAuthFilter;
 import org.springframework.context.annotation.*;
 import org.springframework.security.config.Customizer;
+import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.crypto.bcrypt.*;
@@ -12,6 +13,7 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 
 @Configuration
 @EnableWebSecurity
+@EnableMethodSecurity
 public class SecurityConfig {
 
     private final JwtAuthFilter jwtAuthFilter;
@@ -44,5 +46,3 @@ public class SecurityConfig {
         return http.build();
     }
 }
-
-

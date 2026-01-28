@@ -7,36 +7,36 @@ import lombok.*;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "pessoas", indexes = {
-        @Index(name = "idx_pessoas_condominio", columnList = "condominio_id"),
-        @Index(name = "idx_pessoas_email", columnList = "email")
-})
-@Getter
-@Setter
-@NoArgsConstructor
-@AllArgsConstructor
-@Builder
+@Table(name = "pessoas",
+        indexes = {
+                @Index(name = "idx_pessoas_cpfcnpj", columnList = "cpf_cnpj", unique = true)
+        })
+@Getter @Setter
+@NoArgsConstructor @AllArgsConstructor @Builder
 public class Pessoa {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @ManyToOne(optional = false, fetch = FetchType.LAZY)
-    @JoinColumn(name = "condominio_id")
-    private Condominio condominio;
-
     @Column(nullable = false)
     private String nome;
 
-    /**
-     * CPF ou CNPJ (mantido como String; você pode normalizar depois).
-     */
-    private String documento;
+    // Unifica cpf (moradores) e cpf_cnpj (proprietarios)
+    @Column(name = "cpf_cnpj", unique = true)
+    private String cpfCnpj;
 
     private String email;
     private String telefone;
 
+    @Column(nullable = false)
+    private Boolean ativo = true;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "condominio_id", nullable = false)
+    private Condominio condominio;
+
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 }
+

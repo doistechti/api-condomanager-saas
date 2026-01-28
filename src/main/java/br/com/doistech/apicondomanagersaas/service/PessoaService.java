@@ -33,7 +33,6 @@ public class PessoaService {
         Pessoa entity = Pessoa.builder()
                 .condominio(condominioService.getEntity(req.condominioId()))
                 .nome(req.nome())
-                .documento(req.documento())
                 .email(req.email())
                 .telefone(req.telefone())
                 .createdAt(LocalDateTime.now())
@@ -46,7 +45,6 @@ public class PessoaService {
     public PessoaResponse update(Long id, Long condominioId, PessoaUpdateRequest req) {
         Pessoa entity = getEntity(id, condominioId);
         entity.setNome(req.nome());
-        entity.setDocumento(req.documento());
         entity.setEmail(req.email());
         entity.setTelefone(req.telefone());
         entity.setUpdatedAt(LocalDateTime.now());

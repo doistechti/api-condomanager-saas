@@ -10,6 +10,7 @@ public record CondominioCreateRequest(
         String telefone,
         String endereco,
         String tipoSetor,
-        String logoUrl
+        String logoUrl,
+        Long planoId
 ) {
 }

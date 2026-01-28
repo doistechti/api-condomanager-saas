@@ -52,11 +52,20 @@ public class UnidadeService {
     }
 
     public List<UnidadeResponse> listByCondominio(Long condominioId) {
-        return repository.findAllByCondominioId(condominioId).stream().map(mapper::toResponse).toList();
+        return repository.findAllByCondominioId(condominioId)
+                .stream()
+                .filter(Unidade::getAtivo)
+                .map(mapper::toResponse)
+                .toList();
     }
 
     public void delete(Long id, Long condominioId) {
-        repository.delete(getEntity(id, condominioId));
+        Unidade unidade = getEntity(id, condominioId);
+
+        unidade.setAtivo(false);
+        unidade.setUpdatedAt(LocalDateTime.now());
+
+        repository.save(unidade);
     }
 
     public Unidade getEntity(Long id, Long condominioId) {

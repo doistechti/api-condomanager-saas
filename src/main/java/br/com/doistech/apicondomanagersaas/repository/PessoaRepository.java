@@ -10,4 +10,5 @@ public interface PessoaRepository extends JpaRepository<Pessoa, Long> {
     List<Pessoa> findAllByCondominioId(Long condominioId);
     Optional<Pessoa> findByIdAndCondominioId(Long id, Long condominioId);
     Optional<Pessoa> findByCondominioIdAndEmail(Long condominioId, String email);
+    Optional<Pessoa> findByCpfCnpj(String cpfCnpj);
 }
