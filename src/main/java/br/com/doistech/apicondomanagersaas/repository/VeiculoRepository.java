@@ -10,4 +10,6 @@ public interface VeiculoRepository extends JpaRepository<Veiculo, Long> {
     List<Veiculo> findAllByCondominioId(Long condominioId);
     List<Veiculo> findAllByPessoaIdAndCondominioId(Long pessoaId, Long condominioId);
     Optional<Veiculo> findByIdAndCondominioId(Long id, Long condominioId);
+
+    long countByCondominioId(Long condominioId);
 }

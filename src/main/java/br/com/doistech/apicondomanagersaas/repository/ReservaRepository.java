@@ -15,4 +15,6 @@ public interface ReservaRepository extends JpaRepository<Reserva, Long> {
     List<Reserva> findAllByEspacoIdAndCondominioIdAndDataReserva(Long espacoId, Long condominioId, LocalDate dataReserva);
     List<Reserva> findAllByVinculoIdAndCondominioId(Long vinculoId, Long condominioId);
     List<Reserva> findAllByCondominioIdAndStatus(Long condominioId, ReservaStatus status);
+
+    long countByCondominioIdAndStatus(Long condominioId, ReservaStatus status);
 }

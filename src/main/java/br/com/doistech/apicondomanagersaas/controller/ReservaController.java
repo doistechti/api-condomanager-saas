@@ -1,5 +1,6 @@
 package br.com.doistech.apicondomanagersaas.controller;
 
+import br.com.doistech.apicondomanagersaas.domain.reserva.ReservaStatus;
 import br.com.doistech.apicondomanagersaas.dto.reserva.ReservaCreateRequest;
 import br.com.doistech.apicondomanagersaas.dto.reserva.ReservaResponse;
 import br.com.doistech.apicondomanagersaas.dto.reserva.ReservaUpdateRequest;
@@ -9,6 +10,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDate;
 import java.util.List;
 
 @RestController
@@ -34,7 +36,11 @@ public class ReservaController {
     }
 
     @PatchMapping("/{id}")
-    public ReservaResponse updateStatus(@PathVariable Long condominioId, @PathVariable Long id, @RequestBody ReservaUpdateRequest req) {
+    public ReservaResponse updateStatus(
+            @PathVariable Long condominioId,
+            @PathVariable Long id,
+            @RequestBody ReservaUpdateRequest req
+    ) {
         return service.updateStatus(id, condominioId, req);
     }
 
@@ -43,9 +49,19 @@ public class ReservaController {
         return service.getById(id, condominioId);
     }
 
+    /**
+     * ✅ Agora com filtros opcionais:
+     * /reservas?espacoId=&dataInicio=YYYY-MM-DD&dataFim=YYYY-MM-DD&status=
+     */
     @GetMapping
-    public List<ReservaResponse> list(@PathVariable Long condominioId) {
-        return service.listByCondominio(condominioId);
+    public List<ReservaResponse> list(
+            @PathVariable Long condominioId,
+            @RequestParam(required = false) Long espacoId,
+            @RequestParam(required = false) LocalDate dataInicio,
+            @RequestParam(required = false) LocalDate dataFim,
+            @RequestParam(required = false) ReservaStatus status
+    ) {
+        return service.listFiltered(condominioId, espacoId, dataInicio, dataFim, status);
     }
 
     @GetMapping("/pendentes")

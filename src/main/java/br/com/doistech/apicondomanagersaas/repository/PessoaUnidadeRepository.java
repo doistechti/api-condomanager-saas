@@ -12,12 +12,16 @@ public interface PessoaUnidadeRepository extends JpaRepository<PessoaUnidade, Lo
 
     List<PessoaUnidade> findAllByCondominioIdAndUnidadeIdAndAtivoTrue(Long condominioId, Long unidadeId);
 
+    // ✅ novos (fachadas)
+    List<PessoaUnidade> findAllByCondominioIdAndEhMoradorTrueAndAtivoTrue(Long condominioId);
+
+    List<PessoaUnidade> findAllByCondominioIdAndEhProprietarioTrueAndAtivoTrue(Long condominioId);
+
     Optional<PessoaUnidade> findByIdAndCondominioId(Long id, Long condominioId);
 
-    // REGRA B: bloquear se já existir outro principal (considerando somente ativos)
     boolean existsByCondominioIdAndUnidadeIdAndPrincipalTrueAndAtivoTrue(Long condominioId, Long unidadeId);
 
     boolean existsByCondominioIdAndUnidadeIdAndPrincipalTrueAndAtivoTrueAndIdNot(Long condominioId, Long unidadeId, Long id);
+
+    long countByCondominioIdAndEhMoradorTrueAndAtivoTrue(Long condominioId);
 }
-
-

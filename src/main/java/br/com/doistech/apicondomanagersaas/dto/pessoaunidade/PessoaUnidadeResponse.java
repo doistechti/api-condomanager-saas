@@ -1,6 +1,9 @@
 package br.com.doistech.apicondomanagersaas.dto.pessoaunidade;
 
+import br.com.doistech.apicondomanagersaas.domain.pessoaUnidade.MoradorTipo;
+
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 
 public record PessoaUnidadeResponse(
         Long id,
@@ -15,11 +18,13 @@ public record PessoaUnidadeResponse(
 
         Boolean ehProprietario,
         Boolean ehMorador,
+        MoradorTipo moradorTipo,
         Boolean principal,
 
         LocalDate dataInicio,
         LocalDate dataFim,
 
-        Long usuarioId
+        Long usuarioId,
+        LocalDateTime conviteEnviadoEm,
+        LocalDateTime conviteAceitoEm
 ) {}
-

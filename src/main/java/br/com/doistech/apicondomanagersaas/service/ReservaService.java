@@ -12,6 +12,7 @@ import br.com.doistech.apicondomanagersaas.repository.ReservaRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.List;
@@ -110,5 +111,28 @@ public class ReservaService {
                 throw new BadRequestException("Conflito de reserva para este espaço/data/horário");
             }
         }
+    }
+
+    public List<ReservaResponse> listFiltered(
+            Long condominioId,
+            Long espacoId,
+            LocalDate dataInicio,
+            LocalDate dataFim,
+            ReservaStatus status
+    ) {
+        return repository.findAllByCondominioId(condominioId)
+                .stream()
+                .filter(r -> espacoId == null || r.getEspaco().getId().equals(espacoId))
+                .filter(r -> status == null || r.getStatus() == status)
+                .filter(r -> {
+                    if (dataInicio == null && dataFim == null) return true;
+                    LocalDate d = r.getDataReserva();
+                    if (d == null) return false;
+                    if (dataInicio != null && d.isBefore(dataInicio)) return false;
+                    if (dataFim != null && d.isAfter(dataFim)) return false;
+                    return true;
+                })
+                .map(mapper::toResponse)
+                .toList();
     }
 }

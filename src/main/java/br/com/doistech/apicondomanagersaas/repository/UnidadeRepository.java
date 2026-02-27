@@ -9,4 +9,6 @@ import java.util.Optional;
 public interface UnidadeRepository extends JpaRepository<Unidade, Long> {
     List<Unidade> findAllByCondominioId(Long condominioId);
     Optional<Unidade> findByIdAndCondominioId(Long id, Long condominioId);
+
+    long countByCondominioIdAndAtivoTrue(Long condominioId);
 }

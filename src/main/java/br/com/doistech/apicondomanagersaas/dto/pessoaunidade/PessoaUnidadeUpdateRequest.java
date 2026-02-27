@@ -1,11 +1,11 @@
 package br.com.doistech.apicondomanagersaas.dto.pessoaunidade;
 
+import br.com.doistech.apicondomanagersaas.domain.pessoaUnidade.MoradorTipo;
 import jakarta.validation.constraints.NotNull;
 
 import java.time.LocalDate;
 
 public record PessoaUnidadeUpdateRequest(
-        // dados pessoais opcionais para atualização
         String nome,
         String cpfCnpj,
         String email,
@@ -13,9 +13,12 @@ public record PessoaUnidadeUpdateRequest(
 
         @NotNull Boolean ehProprietario,
         @NotNull Boolean ehMorador,
+
+        // ✅ novo (quando ehMorador=true)
+        MoradorTipo moradorTipo,
+
         @NotNull Boolean principal,
 
         LocalDate dataInicio,
         LocalDate dataFim
 ) {}
-

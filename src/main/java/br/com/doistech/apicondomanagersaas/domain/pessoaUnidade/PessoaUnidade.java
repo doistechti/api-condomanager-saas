@@ -44,20 +44,27 @@ public class PessoaUnidade {
     @Column(nullable = false)
     private Boolean ehMorador = false;
 
-    // Pessoa de referência da unidade (decisões/correspondências)
+    /**
+     * ✅ NOVO: tipo do morador (quando ehMorador=true)
+     * (para não perder o dado que hoje existe no Supabase)
+     */
+    @Enumerated(EnumType.STRING)
+    @Column(name = "morador_tipo")
+    private MoradorTipo moradorTipo;
+
+    // Pessoa de referência da unidade
     @Column(nullable = false)
     private Boolean principal = false;
 
-    // Histórico do vínculo (especialmente para inquilino)
     private LocalDate dataInicio;
     private LocalDate dataFim;
 
-    // Login opcional (quando aceitar convite / virar usuário)
+    // Login opcional
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "usuario_id")
     private Usuario usuario;
 
-    // Convite (se você quiser manter essa lógica)
+    // Convite
     private String conviteToken;
     private LocalDateTime conviteEnviadoEm;
     private LocalDateTime conviteAceitoEm;
@@ -68,4 +75,3 @@ public class PessoaUnidade {
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 }
-

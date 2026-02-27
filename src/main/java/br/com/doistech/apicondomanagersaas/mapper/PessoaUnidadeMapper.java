@@ -15,7 +15,10 @@ public interface PessoaUnidadeMapper {
     @Mapping(target = "cpfCnpj", source = "pessoa.cpfCnpj")
     @Mapping(target = "email", source = "pessoa.email")
     @Mapping(target = "telefone", source = "pessoa.telefone")
+
     @Mapping(target = "usuarioId", expression = "java(entity.getUsuario() != null ? entity.getUsuario().getId() : null)")
+    @Mapping(target = "conviteEnviadoEm", source = "conviteEnviadoEm")
+    @Mapping(target = "conviteAceitoEm", source = "conviteAceitoEm")
+    @Mapping(target = "moradorTipo", source = "moradorTipo")
     PessoaUnidadeResponse toResponse(PessoaUnidade entity);
 }
-

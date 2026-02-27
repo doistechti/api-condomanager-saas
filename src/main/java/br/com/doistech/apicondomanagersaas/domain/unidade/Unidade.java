@@ -36,9 +36,33 @@ public class Unidade {
 
     private String descricao;
 
+    /**
+     * ✅ IMPORTANTE:
+     * Como a entidade usa Lombok @Builder, o valor "ativo = true" NÃO é aplicado no builder
+     * sem o @Builder.Default. Sem isso, o builder cria "ativo = null" e o banco quebra (NOT NULL).
+     */
+    @Builder.Default
     @Column(nullable = false)
     private Boolean ativo = true;
 
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
+
+    /**
+     * ✅ Garantia extra (simples e segura):
+     * Mesmo que alguém crie a entidade manualmente e esqueça de setar ativo/timestamps,
+     * o JPA garante valores válidos antes de persistir.
+     */
+    @PrePersist
+    public void prePersist() {
+        if (ativo == null) ativo = true;
+        if (createdAt == null) createdAt = LocalDateTime.now();
+        updatedAt = LocalDateTime.now();
+    }
+
+    @PreUpdate
+    public void preUpdate() {
+        if (ativo == null) ativo = true;
+        updatedAt = LocalDateTime.now();
+    }
 }

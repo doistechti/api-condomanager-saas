@@ -28,7 +28,7 @@ public class PessoaUnidadeController {
                 req.unidadeId(),
                 req.pessoaId(),
                 req.nome(), req.cpfCnpj(), req.email(), req.telefone(),
-                req.ehProprietario(), req.ehMorador(), req.principal(),
+                req.ehProprietario(), req.ehMorador(), req.moradorTipo(), req.principal(),
                 req.dataInicio(), req.dataFim()
         );
         return service.create(fixed);

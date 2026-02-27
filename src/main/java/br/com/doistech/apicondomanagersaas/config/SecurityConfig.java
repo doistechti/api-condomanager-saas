@@ -1,14 +1,16 @@
 package br.com.doistech.apicondomanagersaas.config;
 
 import br.com.doistech.apicondomanagersaas.security.JwtAuthFilter;
-import org.springframework.context.annotation.*;
+import br.com.doistech.apicondomanagersaas.security.TenantIsolationFilter;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
-import org.springframework.security.crypto.bcrypt.*;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.security.web.*;
+import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
 @Configuration
@@ -17,9 +19,11 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 public class SecurityConfig {
 
     private final JwtAuthFilter jwtAuthFilter;
+    private final TenantIsolationFilter tenantIsolationFilter;
 
-    public SecurityConfig(JwtAuthFilter jwtAuthFilter) {
+    public SecurityConfig(JwtAuthFilter jwtAuthFilter, TenantIsolationFilter tenantIsolationFilter) {
         this.jwtAuthFilter = jwtAuthFilter;
+        this.tenantIsolationFilter = tenantIsolationFilter;
     }
 
     @Bean
@@ -42,7 +46,10 @@ public class SecurityConfig {
                         ).permitAll()
                         .anyRequest().authenticated()
                 )
-                .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
+                // 1) autentica (SecurityContext)
+                .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class)
+                // 2) valida tenant (condominioId do path x claim)
+                .addFilterAfter(tenantIsolationFilter, JwtAuthFilter.class);
 
         return http.build();
     }

@@ -17,6 +17,7 @@ import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
@@ -29,7 +30,6 @@ public class PessoaUnidadeService {
     private final PessoaUnidadeMapper mapper;
 
     public PessoaUnidadeResponse create(PessoaUnidadeCreateRequest req) {
-        // regra B: se principal=true e já existe outro principal na unidade => bloqueia
         if (Boolean.TRUE.equals(req.principal())) {
             boolean jaExiste = repository.existsByCondominioIdAndUnidadeIdAndPrincipalTrueAndAtivoTrue(
                     req.condominioId(), req.unidadeId()
@@ -46,20 +46,36 @@ public class PessoaUnidadeService {
 
         Pessoa pessoa = resolvePessoa(req);
 
-        PessoaUnidade pu = new PessoaUnidade();
+        // ✅ regra: se já existe vínculo ativo para (unidade,pessoa) atualiza flags ao invés de duplicar
+        // (isso é essencial para "proprietário que também mora")
+        var existenteOpt = repository.findAllByCondominioIdAndUnidadeIdAndAtivoTrue(req.condominioId(), req.unidadeId())
+                .stream()
+                .filter(v -> v.getPessoa().getId().equals(pessoa.getId()))
+                .findFirst();
+
+        PessoaUnidade pu = existenteOpt.orElseGet(PessoaUnidade::new);
+
         pu.setCondominio(condominio);
         pu.setUnidade(unidade);
         pu.setPessoa(pessoa);
 
         pu.setEhProprietario(req.ehProprietario());
         pu.setEhMorador(req.ehMorador());
-        pu.setPrincipal(req.principal());
 
+        // ✅ guarda o tipo quando for morador
+        if (Boolean.TRUE.equals(req.ehMorador())) {
+            pu.setMoradorTipo(req.moradorTipo());
+        } else {
+            pu.setMoradorTipo(null);
+        }
+
+        pu.setPrincipal(req.principal());
         pu.setDataInicio(req.dataInicio());
         pu.setDataFim(req.dataFim());
 
         pu.setAtivo(true);
-        pu.setCreatedAt(LocalDateTime.now());
+
+        if (pu.getCreatedAt() == null) pu.setCreatedAt(LocalDateTime.now());
         pu.setUpdatedAt(LocalDateTime.now());
 
         repository.save(pu);
@@ -69,7 +85,6 @@ public class PessoaUnidadeService {
     public PessoaUnidadeResponse update(Long id, Long condominioId, PessoaUnidadeUpdateRequest req) {
         PessoaUnidade pu = getEntity(id, condominioId);
 
-        // regra B: se principal=true e existe outro principal (id diferente) => bloqueia
         if (Boolean.TRUE.equals(req.principal())) {
             boolean jaExisteOutro = repository.existsByCondominioIdAndUnidadeIdAndPrincipalTrueAndAtivoTrueAndIdNot(
                     condominioId, pu.getUnidade().getId(), id
@@ -79,7 +94,6 @@ public class PessoaUnidadeService {
             }
         }
 
-        // Atualiza dados pessoais (se vierem)
         Pessoa p = pu.getPessoa();
         if (req.nome() != null) p.setNome(req.nome());
         if (req.cpfCnpj() != null) p.setCpfCnpj(req.cpfCnpj());
@@ -90,6 +104,13 @@ public class PessoaUnidadeService {
 
         pu.setEhProprietario(req.ehProprietario());
         pu.setEhMorador(req.ehMorador());
+
+        if (Boolean.TRUE.equals(req.ehMorador())) {
+            pu.setMoradorTipo(req.moradorTipo());
+        } else {
+            pu.setMoradorTipo(null);
+        }
+
         pu.setPrincipal(req.principal());
         pu.setDataInicio(req.dataInicio());
         pu.setDataFim(req.dataFim());
@@ -117,6 +138,42 @@ public class PessoaUnidadeService {
                 .toList();
     }
 
+    // ✅ fachadas
+    public List<PessoaUnidadeResponse> listMoradores(Long condominioId) {
+        return repository.findAllByCondominioIdAndEhMoradorTrueAndAtivoTrue(condominioId)
+                .stream().map(mapper::toResponse).toList();
+    }
+
+    public List<PessoaUnidadeResponse> listProprietarios(Long condominioId) {
+        return repository.findAllByCondominioIdAndEhProprietarioTrueAndAtivoTrue(condominioId)
+                .stream().map(mapper::toResponse).toList();
+    }
+
+    // ✅ convite (MVP)
+    public PessoaUnidadeResponse enviarConvite(Long id, Long condominioId) {
+        PessoaUnidade pu = getEntity(id, condominioId);
+
+        if (!Boolean.TRUE.equals(pu.getEhMorador())) {
+            throw new BadRequestException("Convite só pode ser enviado para moradores.");
+        }
+
+        if (pu.getUsuario() != null) {
+            throw new BadRequestException("Este morador já possui uma conta ativa.");
+        }
+
+        // precisa ter e-mail na pessoa
+        if (pu.getPessoa() == null || pu.getPessoa().getEmail() == null || pu.getPessoa().getEmail().isBlank()) {
+            throw new BadRequestException("Morador não possui e-mail cadastrado.");
+        }
+
+        pu.setConviteToken(UUID.randomUUID().toString());
+        pu.setConviteEnviadoEm(LocalDateTime.now());
+        pu.setUpdatedAt(LocalDateTime.now());
+        repository.save(pu);
+
+        return mapper.toResponse(pu);
+    }
+
     // soft delete
     public void delete(Long id, Long condominioId) {
         PessoaUnidade pu = getEntity(id, condominioId);
@@ -136,13 +193,11 @@ public class PessoaUnidadeService {
                     .orElseThrow(() -> new NotFoundException("Pessoa não encontrada"));
         }
 
-        // se tiver cpfCnpj, tenta reutilizar pessoa existente para evitar duplicidade
         if (req.cpfCnpj() != null && !req.cpfCnpj().isBlank()) {
             return pessoaRepository.findByCpfCnpj(req.cpfCnpj())
                     .orElseGet(() -> criarPessoa(req));
         }
 
-        // sem cpfCnpj, cria novo (você pode endurecer essa regra depois)
         return criarPessoa(req);
     }
 
@@ -151,15 +206,21 @@ public class PessoaUnidadeService {
             throw new BadRequestException("Nome é obrigatório para criar uma pessoa.");
         }
 
+        // ✅ garante condominio_id preenchido (coluna NOT NULL)
+        Condominio condominio = condominioService.getEntity(req.condominioId());
+
         Pessoa p = new Pessoa();
+        p.setCondominio(condominio); // ✅ ESSENCIAL
+
         p.setNome(req.nome());
         p.setCpfCnpj(req.cpfCnpj());
         p.setEmail(req.email());
         p.setTelefone(req.telefone());
+
         p.setAtivo(true);
         p.setCreatedAt(LocalDateTime.now());
         p.setUpdatedAt(LocalDateTime.now());
+
         return pessoaRepository.save(p);
     }
 }
-
