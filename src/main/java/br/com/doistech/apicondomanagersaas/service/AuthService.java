@@ -1,5 +1,6 @@
 package br.com.doistech.apicondomanagersaas.service;
 
+import br.com.doistech.apicondomanagersaas.common.exception.ForbiddenException;
 import br.com.doistech.apicondomanagersaas.config.JwtUtil;
 import br.com.doistech.apicondomanagersaas.domain.usuario.Usuario;
 import br.com.doistech.apicondomanagersaas.dto.auth.LoginRequest;
@@ -29,7 +30,7 @@ public class AuthService {
                 .orElseThrow(() -> new RuntimeException("Credenciais inválidas"));
 
         if (Boolean.FALSE.equals(u.getAtivo())) {
-            throw new RuntimeException("Usuário inativo");
+            throw new ForbiddenException("Conta aguardando liberação do Trial pelo gestor do SaaS.");
         }
 
         if (!passwordEncoder.matches(req.senha(), u.getSenha())) {
