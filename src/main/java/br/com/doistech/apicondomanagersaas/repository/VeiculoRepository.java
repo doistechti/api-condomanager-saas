@@ -12,4 +12,8 @@ public interface VeiculoRepository extends JpaRepository<Veiculo, Long> {
     Optional<Veiculo> findByIdAndCondominioId(Long id, Long condominioId);
 
     long countByCondominioId(Long condominioId);
+
+    // ✅ Validações simples para MORADOR (sem overengineering)
+    boolean existsByCondominioIdAndPlacaIgnoreCase(Long condominioId, String placa);
+    boolean existsByCondominioIdAndPlacaIgnoreCaseAndIdNot(Long condominioId, String placa, Long id);
 }
