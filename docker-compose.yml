@@ -1,12 +1,52 @@
 services:
+  traefik:
+    image: traefik:v2.11
+    container_name: traefik
+    restart: unless-stopped
+    command:
+      # Logs
+      - --log.level=INFO
+
+      # Dashboard (opcional; deixe false por segurança)
+      - --api.dashboard=false
+
+      # Providers
+      - --providers.docker=true
+      - --providers.docker.exposedbydefault=false
+
+      # Entrypoints
+      - --entrypoints.web.address=:80
+      - --entrypoints.websecure.address=:443
+
+      # Redirect HTTP -> HTTPS
+      - --entrypoints.web.http.redirections.entrypoint.to=websecure
+      - --entrypoints.web.http.redirections.entrypoint.scheme=https
+
+      # Let's Encrypt (HTTP-01)
+      - --certificatesresolvers.le.acme.email=${TRAEFIK_EMAIL}
+      - --certificatesresolvers.le.acme.storage=/letsencrypt/acme.json
+      - --certificatesresolvers.le.acme.httpchallenge=true
+      - --certificatesresolvers.le.acme.httpchallenge.entrypoint=web
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - letsencrypt:/letsencrypt
+    networks:
+      - web
+
   api-condomanager-saas:
     build:
       context: .
       dockerfile: Dockerfile
     container_name: api-condomanager-saas
     restart: unless-stopped
-    ports:
-      - "${APP_PORT:-8080}:8080"
+
+    # ⚠️ Removido para não expor 8080 publicamente
+    # ports:
+    #   - "${APP_PORT:-8080}:8080"
+
     environment:
       BANCO_HOST_PRD: ${BANCO_HOST_PRD}
       BANCO_PORTA_PRD: ${BANCO_PORTA_PRD:-3306}
@@ -31,7 +71,27 @@ services:
     volumes:
       - condo_uploads:/opt/condomanager/uploads
 
+    networks:
+      - web
+
+    labels:
+      - "traefik.enable=true"
+
+      # Roteador HTTPS por HOST (subdomínio)
+      - "traefik.http.routers.condotech.rule=Host(`${TRAEFIK_DOMAIN}`)"
+      - "traefik.http.routers.condotech.entrypoints=websecure"
+      - "traefik.http.routers.condotech.tls=true"
+      - "traefik.http.routers.condotech.tls.certresolver=le"
+
+      # Porta interna do container (Tomcat 8080)
+      - "traefik.http.services.condotech.loadbalancer.server.port=8080"
+
 volumes:
   condo_uploads:
+  letsencrypt:
+
+networks:
+  web:
+    driver: bridge
 
 #-DBANCO_HOST_PRD=database-doistech.cpke4uyawwd9.sa-east-1.rds.amazonaws.com -DBANCO_PORTA_PRD=3306 -DBANCO_SCHEMA_PRD=condotech_dev -DBANCO_USUARIO_PRD=doistechdba -DBANCO_SENHA_PRD=31BFC597A7B405A37235CA1629F3ABDE6A1FEF48 -DAPP_JWT_SECRET=s8exZIabrST7iwJUF9NFdYEpEzs1Mdz20dxwmY9B8Pb -DAPP_JWT_EXPIRATION_MINUTES=480 -Dspring.mail.host=smtp.gmail.com -Dspring.mail.port=587 -Dspring.mail.username=doistechti@gmail.com -Dspring.mail.password=PREENCHER_SENHA_DE_APP_GOOGLE -Dspring.mail.properties.mail.smtp.auth=true -Dspring.mail.properties.mail.smtp.starttls.enable=true -Dspring.mail.properties.mail.smtp.connectiontimeout=5000 -Dspring.mail.properties.mail.smtp.timeout=5000 -Dspring.mail.properties.mail.smtp.writetimeout=5000 -Dapp.mail.from=doistechti@gmail.com -Dapp.frontend.base-url=https://bloco-casa-connect.vercel.app -Dapp.frontend.morador-convite-path=/convite/morador -Dapp.convite.morador.expiration-hours=72
