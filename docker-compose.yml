@@ -1,17 +1,37 @@
 services:
-  mysql:
-    image: mysql:8.0
-    container_name: condo_manager_mysql
-    environment:
-      MYSQL_DATABASE: condo_manager_saas
-      MYSQL_USER: condo
-      MYSQL_PASSWORD: condo123
-      MYSQL_ROOT_PASSWORD: root123
+  api-condomanager-saas:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: api-condomanager-saas
+    restart: unless-stopped
     ports:
-      - "3306:3306"
+      - "${APP_PORT:-8080}:8080"
+    environment:
+      BANCO_HOST_PRD: ${BANCO_HOST_PRD}
+      BANCO_PORTA_PRD: ${BANCO_PORTA_PRD:-3306}
+      BANCO_SCHEMA_PRD: ${BANCO_SCHEMA_PRD}
+      BANCO_USUARIO_PRD: ${BANCO_USUARIO_PRD}
+      BANCO_SENHA_PRD: ${BANCO_SENHA_PRD}
+      APP_JWT_SECRET: ${APP_JWT_SECRET}
+      APP_JWT_EXPIRATION_MINUTES: ${APP_JWT_EXPIRATION_MINUTES:-480}
+      APP_MAIL_FROM: ${APP_MAIL_FROM}
+      APP_FRONTEND_BASE_URL: ${APP_FRONTEND_BASE_URL}
+      APP_FRONTEND_MORADOR_CONVITE_PATH: ${APP_FRONTEND_MORADOR_CONVITE_PATH:-/convite/morador}
+      APP_CONVITE_MORADOR_EXPIRATION_HOURS: ${APP_CONVITE_MORADOR_EXPIRATION_HOURS:-72}
+      SMTP_HOST: ${SMTP_HOST:-smtp.gmail.com}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_USERNAME: ${SMTP_USERNAME}
+      SMTP_PASSWORD: ${SMTP_PASSWORD}
+      SMTP_AUTH: ${SMTP_AUTH:-true}
+      SMTP_STARTTLS: ${SMTP_STARTTLS:-true}
+      JAVA_TOOL_OPTIONS: >-
+        -Dapp.uploads.dir=/opt/condomanager/uploads
+        -Dfile.encoding=UTF-8
     volumes:
-      - mysql_data:/var/lib/mysql
-    command: --default-authentication-plugin=mysql_native_password
+      - condo_uploads:/opt/condomanager/uploads
 
 volumes:
-  mysql_data:
+  condo_uploads:
+
+#-DBANCO_HOST_PRD=database-doistech.cpke4uyawwd9.sa-east-1.rds.amazonaws.com -DBANCO_PORTA_PRD=3306 -DBANCO_SCHEMA_PRD=condotech_dev -DBANCO_USUARIO_PRD=doistechdba -DBANCO_SENHA_PRD=31BFC597A7B405A37235CA1629F3ABDE6A1FEF48 -DAPP_JWT_SECRET=s8exZIabrST7iwJUF9NFdYEpEzs1Mdz20dxwmY9B8Pb -DAPP_JWT_EXPIRATION_MINUTES=480 -Dspring.mail.host=smtp.gmail.com -Dspring.mail.port=587 -Dspring.mail.username=doistechti@gmail.com -Dspring.mail.password=PREENCHER_SENHA_DE_APP_GOOGLE -Dspring.mail.properties.mail.smtp.auth=true -Dspring.mail.properties.mail.smtp.starttls.enable=true -Dspring.mail.properties.mail.smtp.connectiontimeout=5000 -Dspring.mail.properties.mail.smtp.timeout=5000 -Dspring.mail.properties.mail.smtp.writetimeout=5000 -Dapp.mail.from=doistechti@gmail.com -Dapp.frontend.base-url=https://bloco-casa-connect.vercel.app -Dapp.frontend.morador-convite-path=/convite/morador -Dapp.convite.morador.expiration-hours=72

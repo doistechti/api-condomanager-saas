@@ -27,6 +27,8 @@ public interface PessoaUnidadeRepository extends JpaRepository<PessoaUnidade, Lo
 
     // ✅ Portal MORADOR: vínculos do morador resolvidos pelo usuario_id (JWT)
     List<PessoaUnidade> findAllByUsuarioIdAndEhMoradorTrueAndAtivoTrue(Long usuarioId);
+
+    Optional<PessoaUnidade> findByConviteToken(String conviteToken);
 }
 
 //package br.com.doistech.apicondomanagersaas.repository;

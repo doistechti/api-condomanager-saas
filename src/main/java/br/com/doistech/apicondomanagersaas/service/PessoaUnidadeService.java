@@ -14,6 +14,7 @@ import br.com.doistech.apicondomanagersaas.repository.PessoaUnidadeRepository;
 import br.com.doistech.apicondomanagersaas.repository.UnidadeRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -28,6 +29,7 @@ public class PessoaUnidadeService {
     private final CondominioService condominioService;
     private final UnidadeRepository unidadeRepository;
     private final PessoaUnidadeMapper mapper;
+    private final MoradorInviteEmailService moradorInviteEmailService;
 
     public PessoaUnidadeResponse create(PessoaUnidadeCreateRequest req) {
         if (Boolean.TRUE.equals(req.principal())) {
@@ -150,6 +152,7 @@ public class PessoaUnidadeService {
     }
 
     // ✅ convite (MVP)
+    @Transactional
     public PessoaUnidadeResponse enviarConvite(Long id, Long condominioId) {
         PessoaUnidade pu = getEntity(id, condominioId);
 
@@ -168,8 +171,10 @@ public class PessoaUnidadeService {
 
         pu.setConviteToken(UUID.randomUUID().toString());
         pu.setConviteEnviadoEm(LocalDateTime.now());
+        pu.setConviteAceitoEm(null);
         pu.setUpdatedAt(LocalDateTime.now());
         repository.save(pu);
+        moradorInviteEmailService.sendInvite(pu);
 
         return mapper.toResponse(pu);
     }

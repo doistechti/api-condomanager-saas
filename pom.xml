@@ -1,10 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<project xmlns="http://maven.apache.org/POM/4.0.1"
+<project xmlns="http://maven.apache.org/POM/4.0.0"
          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-         xsi:schemaLocation="http://maven.apache.org/POM/4.0.1
-                             https://maven.apache.org/xsd/maven-4.0.1.xsd">
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0
+                             https://maven.apache.org/xsd/maven-4.0.0.xsd">
 
-    <modelVersion>4.0.1</modelVersion>
+    <modelVersion>4.0.0</modelVersion>
 
     <groupId>br.com.doistech</groupId>
     <artifactId>api-condomanager-saas</artifactId>
@@ -12,10 +12,13 @@
     <name>api-condomanager-saas</name>
     <description>API SaaS para gestão de condomínios</description>
 
+    <!-- ✅ ADICIONADO: empacotar como WAR -->
+    <packaging>war</packaging>
+
     <parent>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-starter-parent</artifactId>
-        <version>4.0.1</version>
+        <version>3.4.4</version>
         <relativePath/>
     </parent>
 
@@ -23,14 +26,17 @@
     <!-- PROPRIEDADES GERAIS -->
     <!-- ===================== -->
     <properties>
-        <java.version>21</java.version>
+        <java.version>17</java.version>
+
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
 
         <mapstruct.version>1.6.3</mapstruct.version>
         <lombok.version>1.18.42</lombok.version>
-        <flyway.version>11.14.1</flyway.version>
         <mysql.version>9.5.0</mysql.version>
         <jjwt.version>0.12.6</jjwt.version>
     </properties>
+
 
     <!-- ===================== -->
     <!-- DEPENDÊNCIAS -->
@@ -41,6 +47,13 @@
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-web</artifactId>
+        </dependency>
+
+        <!-- ✅ ADICIONADO: Tomcat como PROVIDED (porque quem executa é o Tomcat do servidor) -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-tomcat</artifactId>
+            <scope>provided</scope>
         </dependency>
 
         <!-- JPA / HIBERNATE -->
@@ -62,16 +75,10 @@
             <version>${mysql.version}</version>
         </dependency>
 
-        <!-- FLYWAY -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-flyway</artifactId>
-        </dependency>
-
-        <dependency>
-            <groupId>org.flywaydb</groupId>
-            <artifactId>flyway-mysql</artifactId>
-            <version>${flyway.version}</version>
+            <artifactId>spring-boot-starter-test</artifactId>
+            <scope>test</scope>
         </dependency>
 
 
@@ -110,6 +117,11 @@
             <artifactId>spring-boot-starter-validation</artifactId>
         </dependency>
 
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-mail</artifactId>
+        </dependency>
+
         <!-- JWT (JJWT) -->
         <dependency>
             <groupId>io.jsonwebtoken</groupId>
@@ -143,12 +155,23 @@
     <!-- BUILD -->
     <!-- ===================== -->
     <build>
+        <resources>
+            <resource>
+                <directory>src/main/resources</directory>
+                <filtering>false</filtering>
+            </resource>
+        </resources>
+
         <plugins>
 
             <!-- SPRING BOOT -->
             <plugin>
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>
+                <!-- ✅ RECOMENDADO: garante que o empacotamento siga o WAR -->
+                <configuration>
+                    <layout>WAR</layout>
+                </configuration>
             </plugin>
 
             <!-- COMPILER -->
@@ -156,6 +179,8 @@
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
                 <configuration>
+
+                    <encoding>UTF-8</encoding>
                     <source>${java.version}</source>
                     <target>${java.version}</target>
 
