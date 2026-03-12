@@ -42,11 +42,6 @@ services:
       dockerfile: Dockerfile
     container_name: api-condomanager-saas
     restart: unless-stopped
-
-    # ⚠️ Removido para não expor 8080 publicamente
-    # ports:
-    #   - "${APP_PORT:-8080}:8080"
-
     environment:
       BANCO_HOST_PRD: ${BANCO_HOST_PRD}
       BANCO_PORTA_PRD: ${BANCO_PORTA_PRD:-3306}
@@ -76,16 +71,11 @@ services:
 
     labels:
       - "traefik.enable=true"
-
-      # Roteador HTTPS por HOST (subdomínio)
       - "traefik.http.routers.condotech.rule=Host(`${TRAEFIK_DOMAIN}`)"
       - "traefik.http.routers.condotech.entrypoints=websecure"
       - "traefik.http.routers.condotech.tls=true"
       - "traefik.http.routers.condotech.tls.certresolver=le"
-
-      # Porta interna do container (Tomcat 8080)
       - "traefik.http.services.condotech.loadbalancer.server.port=8080"
-
 volumes:
   condo_uploads:
   letsencrypt:
