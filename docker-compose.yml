@@ -71,9 +71,8 @@ services:
 
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.condotech.rule=Host(`${TRAEFIK_DOMAIN}`)"
-      - "traefik.http.routers.condotech.entrypoints=websecure"
-      - "traefik.http.routers.condotech.tls=true"
+      - "traefik.http.routers.condotech.rule=Host(`condoapi.doistech.com.br`)"
+      - "traefik.http.routers.condotech.entrypoints=web,websecure"
       - "traefik.http.routers.condotech.tls.certresolver=le"
       - "traefik.http.services.condotech.loadbalancer.server.port=8080"
 volumes:

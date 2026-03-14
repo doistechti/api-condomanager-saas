@@ -9,12 +9,13 @@ RUN chmod +x mvnw
 RUN ./mvnw -q -DskipTests dependency:go-offline
 
 COPY src src
-RUN ./mvnw -q -DskipTests package
+RUN ./mvnw -q -DskipTests clean package
 
-FROM tomcat:10.1-jdk17-temurin
-WORKDIR /usr/local/tomcat
+FROM eclipse-temurin:17-jre
+WORKDIR /app
 
-RUN rm -rf webapps/*
-COPY --from=build /app/target/*.war webapps/ROOT.war
+COPY --from=build /app/target/*.jar app.jar
 
 EXPOSE 8080
+
+ENTRYPOINT ["java", "-jar", "app.jar"]
