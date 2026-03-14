@@ -14,7 +14,7 @@ public class WebCorsConfig {
 
     @Bean
     public CorsConfigurationSource corsConfigurationSource(
-            @Value("${app.cors.allowed-origins:http://localhost:5173,http://127.0.0.1:5173,http://localhost:8081,http://192.168.1.135:8081,https://bloco-casa-connect.vercel.app}") List<String> allowedOrigins
+            @Value("${app.cors.allowed-origins:http://localhost:5173,http://127.0.0.1:5173,http://localhost:8081,http://192.168.1.135:8081,https://bloco-casa-connect.vercel.app,https://condominiotech.doistech.com.br/}") List<String> allowedOrigins
     ) {
         CorsConfiguration configuration = new CorsConfiguration();
         configuration.setAllowedOrigins(allowedOrigins);
