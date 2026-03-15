@@ -1,11 +1,11 @@
 package br.com.doistech.apicondomanagersaas.controller;
 
+import br.com.doistech.apicondomanagersaas.common.exception.BadRequestException;
 import br.com.doistech.apicondomanagersaas.domain.pessoaUnidade.MoradorTipo;
 import br.com.doistech.apicondomanagersaas.dto.pessoaunidade.PessoaUnidadeCreateRequest;
 import br.com.doistech.apicondomanagersaas.dto.pessoaunidade.PessoaUnidadeResponse;
 import br.com.doistech.apicondomanagersaas.dto.pessoaunidade.PessoaUnidadeUpdateRequest;
 import br.com.doistech.apicondomanagersaas.service.PessoaUnidadeService;
-import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -29,13 +29,13 @@ public class MoradorController {
     @PostMapping
     public ResponseEntity<PessoaUnidadeResponse> criar(
             @PathVariable Long condominioId,
-            @Valid @RequestBody PessoaUnidadeCreateRequest req
+            @RequestBody PessoaUnidadeCreateRequest req
     ) {
-        // ✅ trava tenant pelo path
-        // regra do "tipo":
-        // - moradorTipo=PROPRIETARIO => ehProprietario=true e ehMorador=true (proprietário que mora)
-        // - demais => ehProprietario=false e ehMorador=true
-        boolean isTipoProprietario = req.moradorTipo() == MoradorTipo.PROPRIETARIO;
+        validateCreateRequest(req);
+
+        MoradorTipo moradorTipo = req.moradorTipo() != null ? req.moradorTipo() : MoradorTipo.INQUILINO;
+        boolean isTipoProprietario = moradorTipo == MoradorTipo.PROPRIETARIO;
+        boolean principal = Boolean.TRUE.equals(req.principal());
 
         PessoaUnidadeCreateRequest fixed = new PessoaUnidadeCreateRequest(
                 condominioId,
@@ -45,10 +45,10 @@ public class MoradorController {
                 req.cpfCnpj(),
                 req.email(),
                 req.telefone(),
-                isTipoProprietario,     // ehProprietario
-                true,                   // ehMorador
-                req.moradorTipo(),
-                req.principal(),
+                isTipoProprietario,
+                true,
+                moradorTipo,
+                principal,
                 req.dataInicio(),
                 req.dataFim()
         );
@@ -60,19 +60,23 @@ public class MoradorController {
     public ResponseEntity<PessoaUnidadeResponse> atualizar(
             @PathVariable Long condominioId,
             @PathVariable Long id,
-            @Valid @RequestBody PessoaUnidadeUpdateRequest req
+            @RequestBody PessoaUnidadeUpdateRequest req
     ) {
-        boolean isTipoProprietario = req.moradorTipo() == MoradorTipo.PROPRIETARIO;
+        validateUpdateRequest(req);
+
+        MoradorTipo moradorTipo = req.moradorTipo() != null ? req.moradorTipo() : MoradorTipo.INQUILINO;
+        boolean isTipoProprietario = moradorTipo == MoradorTipo.PROPRIETARIO;
+        boolean principal = Boolean.TRUE.equals(req.principal());
 
         PessoaUnidadeUpdateRequest fixed = new PessoaUnidadeUpdateRequest(
                 req.nome(),
                 req.cpfCnpj(),
                 req.email(),
                 req.telefone(),
-                isTipoProprietario, // ehProprietario
-                true,               // ehMorador
-                req.moradorTipo(),
-                req.principal(),
+                isTipoProprietario,
+                true,
+                moradorTipo,
+                principal,
                 req.dataInicio(),
                 req.dataFim()
         );
@@ -89,5 +93,23 @@ public class MoradorController {
     @PostMapping("/{id}/convite")
     public ResponseEntity<PessoaUnidadeResponse> enviarConvite(@PathVariable Long condominioId, @PathVariable Long id) {
         return ResponseEntity.ok(service.enviarConvite(id, condominioId));
+    }
+
+    private void validateCreateRequest(PessoaUnidadeCreateRequest req) {
+        if (req == null) {
+            throw new BadRequestException("Body da requisicao e obrigatorio.");
+        }
+        if (req.unidadeId() == null) {
+            throw new BadRequestException("unidadeId e obrigatorio.");
+        }
+        if (req.pessoaId() == null && (req.nome() == null || req.nome().isBlank())) {
+            throw new BadRequestException("Nome e obrigatorio para criar um morador novo.");
+        }
+    }
+
+    private void validateUpdateRequest(PessoaUnidadeUpdateRequest req) {
+        if (req == null) {
+            throw new BadRequestException("Body da requisicao e obrigatorio.");
+        }
     }
 }
