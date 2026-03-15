@@ -2,14 +2,20 @@ package br.com.doistech.apicondomanagersaas.service;
 
 import br.com.doistech.apicondomanagersaas.common.exception.ForbiddenException;
 import br.com.doistech.apicondomanagersaas.common.exception.NotFoundException;
+import br.com.doistech.apicondomanagersaas.domain.pessoaUnidade.MoradorTipo;
 import br.com.doistech.apicondomanagersaas.domain.pessoaUnidade.PessoaUnidade;
+import br.com.doistech.apicondomanagersaas.domain.vinculo.TipoMoradia;
+import br.com.doistech.apicondomanagersaas.domain.vinculo.VinculoUnidade;
 import br.com.doistech.apicondomanagersaas.dto.morador.MoradorScopeResponse;
 import br.com.doistech.apicondomanagersaas.repository.PessoaUnidadeRepository;
 import br.com.doistech.apicondomanagersaas.repository.UsuarioRepository;
 import br.com.doistech.apicondomanagersaas.repository.VinculoUnidadeRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.Comparator;
 import java.util.List;
 
@@ -22,36 +28,29 @@ public class MoradorScopeService {
     private final VinculoUnidadeRepository vinculoUnidadeRepository;
     private final CondominioService condominioService;
 
+    @Transactional
     public MoradorScopeResponse getScope(String email) {
         var usuario = usuarioRepository.findByEmail(email)
-                .orElseThrow(() -> new NotFoundException("Usuário não encontrado"));
-
-        boolean isMorador = usuario.getRoles().stream()
-                .anyMatch(r -> "MORADOR".equals(r.getNome()));
-
-        if (!isMorador) {
-            throw new ForbiddenException("Acesso negado: perfil do usuário não é MORADOR");
-        }
+                .orElseThrow(() -> new NotFoundException("Usuario nao encontrado"));
 
         if (usuario.getCondominioId() == null) {
-            throw new ForbiddenException("Acesso negado: usuário sem condomínio associado");
+            throw new ForbiddenException("Acesso negado: usuario sem condominio associado");
         }
 
         List<PessoaUnidade> vinculos = pessoaUnidadeRepository
                 .findAllByUsuarioIdAndEhMoradorTrueAndAtivoTrue(usuario.getId());
 
         if (vinculos.isEmpty()) {
-            throw new ForbiddenException("Acesso negado: usuário não possui vínculo de morador ativo");
+            throw new ForbiddenException("Acesso negado: usuario nao possui vinculo de morador ativo");
         }
 
-        // ✅ Tenant isolation: vínculos precisam pertencer ao mesmo condomínio do usuário
         boolean anyMismatch = vinculos.stream().anyMatch(v ->
                 v.getCondominio() == null
                         || v.getCondominio().getId() == null
                         || !usuario.getCondominioId().equals(v.getCondominio().getId())
         );
         if (anyMismatch) {
-            throw new ForbiddenException("Acesso negado: vínculo não pertence ao condomínio do usuário");
+            throw new ForbiddenException("Acesso negado: vinculo nao pertence ao condominio do usuario");
         }
 
         var principalOpt = vinculos.stream()
@@ -62,8 +61,6 @@ public class MoradorScopeService {
                 vinculos.stream().min(Comparator.comparing(PessoaUnidade::getId)).orElseThrow()
         );
 
-        Long pessoaId = principal.getPessoa().getId();
-
         List<Long> unidadeIds = vinculos.stream()
                 .map(v -> v.getUnidade().getId())
                 .distinct()
@@ -71,26 +68,82 @@ public class MoradorScopeService {
                 .toList();
 
         var condominio = condominioService.getEntity(usuario.getCondominioId());
-
-        // ✅ IMPORTANTÍSSIMO: Reservas usam VinculoUnidade (vinculos_unidade), não PessoaUnidade.
-        var vinculoOperacional = vinculoUnidadeRepository
-                .findByCondominioIdAndPessoaIdAndUnidadeId(
-                        usuario.getCondominioId(),
-                        principal.getPessoa().getId(),
-                        principal.getUnidade().getId()
-                )
-                .orElseThrow(() -> new ForbiddenException(
-                        "Acesso negado: vínculo operacional (vinculos_unidade) não encontrado para este morador. " +
-                                "Rode o bootstrap/semente do MORADOR para criar o vínculo."
-                ));
+        var vinculoOperacional = resolveVinculoOperacional(principal);
 
         return new MoradorScopeResponse(
                 usuario.getId(),
                 usuario.getCondominioId(),
                 condominio.getNome(),
-                pessoaId,
-                vinculoOperacional.getId(), // ✅ agora é o ID correto para reservas
+                principal.getPessoa().getId(),
+                vinculoOperacional.getId(),
                 unidadeIds
         );
+    }
+
+    private VinculoUnidade resolveVinculoOperacional(PessoaUnidade principal) {
+        var vinculo = vinculoUnidadeRepository
+                .findByCondominioIdAndPessoaIdAndUnidadeId(
+                        principal.getCondominio().getId(),
+                        principal.getPessoa().getId(),
+                        principal.getUnidade().getId()
+                )
+                .orElseGet(() -> vinculoUnidadeRepository.save(
+                        VinculoUnidade.builder()
+                                .condominio(principal.getCondominio())
+                                .unidade(principal.getUnidade())
+                                .pessoa(principal.getPessoa())
+                                .isMorador(true)
+                                .isProprietario(Boolean.TRUE.equals(principal.getEhProprietario()))
+                                .tipoMoradia(resolveTipoMoradia(principal))
+                                .dataInicio(principal.getDataInicio() != null ? principal.getDataInicio() : LocalDate.now())
+                                .createdAt(LocalDateTime.now())
+                                .updatedAt(LocalDateTime.now())
+                                .build()
+                ));
+
+        boolean changed = false;
+
+        if (!vinculo.isMorador()) {
+            vinculo.setMorador(true);
+            changed = true;
+        }
+
+        boolean shouldBeProprietario = Boolean.TRUE.equals(principal.getEhProprietario());
+        if (vinculo.isProprietario() != shouldBeProprietario) {
+            vinculo.setProprietario(shouldBeProprietario);
+            changed = true;
+        }
+
+        TipoMoradia tipoMoradia = resolveTipoMoradia(principal);
+        if (vinculo.getTipoMoradia() != tipoMoradia) {
+            vinculo.setTipoMoradia(tipoMoradia);
+            changed = true;
+        }
+
+        if (vinculo.getDataInicio() == null) {
+            vinculo.setDataInicio(principal.getDataInicio() != null ? principal.getDataInicio() : LocalDate.now());
+            changed = true;
+        }
+
+        if (vinculo.getCreatedAt() == null) {
+            vinculo.setCreatedAt(LocalDateTime.now());
+            changed = true;
+        }
+
+        if (changed) {
+            vinculo.setUpdatedAt(LocalDateTime.now());
+            return vinculoUnidadeRepository.save(vinculo);
+        }
+
+        return vinculo;
+    }
+
+    private TipoMoradia resolveTipoMoradia(PessoaUnidade principal) {
+        if (Boolean.TRUE.equals(principal.getEhProprietario())
+                || principal.getMoradorTipo() == MoradorTipo.PROPRIETARIO) {
+            return TipoMoradia.PROPRIETARIO;
+        }
+
+        return TipoMoradia.INQUILINO;
     }
 }

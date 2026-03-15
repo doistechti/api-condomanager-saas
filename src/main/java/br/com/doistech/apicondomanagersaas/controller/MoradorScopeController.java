@@ -2,7 +2,6 @@ package br.com.doistech.apicondomanagersaas.controller;
 
 import br.com.doistech.apicondomanagersaas.dto.morador.MoradorScopeResponse;
 import br.com.doistech.apicondomanagersaas.service.MoradorScopeService;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -19,7 +18,6 @@ public class MoradorScopeController {
     }
 
     @GetMapping("/scope")
-    @PreAuthorize("hasRole('MORADOR')")
     public MoradorScopeResponse getScope(Authentication authentication) {
         return moradorScopeService.getScope(authentication.getName());
     }

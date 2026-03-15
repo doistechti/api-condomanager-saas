@@ -4,14 +4,21 @@ import br.com.doistech.apicondomanagersaas.domain.pessoaUnidade.PessoaUnidade;
 import br.com.doistech.apicondomanagersaas.common.exception.BadRequestException;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.core.io.ClassPathResource;
 import org.springframework.mail.MailAuthenticationException;
 import org.springframework.mail.MailException;
-import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
+import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.stereotype.Service;
+import org.springframework.util.StreamUtils;
+import org.springframework.web.util.HtmlUtils;
+
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 
 @Service
 public class MoradorInviteEmailService {
+    private static final String TEMPLATE_PATH = "templates/emails/morador-invite.html";
 
     private final JavaMailSender mailSender;
     private final String fromAddress;
@@ -36,21 +43,23 @@ public class MoradorInviteEmailService {
         }
 
         String email = pessoaUnidade.getPessoa().getEmail();
-        String subject = "Convite para acessar a plataforma CondoManager";
+        String subject = buildSubject(pessoaUnidade);
         String inviteUrl = buildInviteUrl(pessoaUnidade.getConviteToken());
 
-        SimpleMailMessage message = new SimpleMailMessage();
-        message.setFrom(fromAddress);
-        message.setTo(email);
-        message.setSubject(subject);
-        message.setText(buildBody(pessoaUnidade, inviteUrl));
-
         try {
+            var message = mailSender.createMimeMessage();
+            var helper = new MimeMessageHelper(message, StandardCharsets.UTF_8.name());
+            helper.setFrom(fromAddress);
+            helper.setTo(email);
+            helper.setSubject(subject);
+            helper.setText(buildHtmlBody(pessoaUnidade, inviteUrl), true);
             mailSender.send(message);
         } catch (MailAuthenticationException ex) {
             throw new IllegalStateException("Falha ao autenticar no servidor SMTP. Verifique as credenciais de e-mail.", ex);
         } catch (MailException ex) {
             throw new IllegalStateException("Falha ao enviar e-mail de convite do morador.", ex);
+        } catch (Exception ex) {
+            throw new IllegalStateException("Falha ao montar o template de e-mail do convite do morador.", ex);
         }
     }
 
@@ -60,23 +69,30 @@ public class MoradorInviteEmailService {
         return baseUrl + path + "?token=" + token;
     }
 
-    private String buildBody(PessoaUnidade pessoaUnidade, String inviteUrl) {
-        String nome = pessoaUnidade.getPessoa().getNome();
-        String unidade = pessoaUnidade.getUnidade().getIdentificacao();
-        String condominio = pessoaUnidade.getCondominio().getNome();
+    private String buildSubject(PessoaUnidade pessoaUnidade) {
+        String nomeCondominio = pessoaUnidade.getCondominio() != null ? pessoaUnidade.getCondominio().getNome() : "";
+        return "[" + nomeCondominio + "] - Ative seu acesso ao Sistema do Condominio.";
+    }
 
-        return """
-                Ola, %s!
+    private String buildHtmlBody(PessoaUnidade pessoaUnidade, String inviteUrl) {
+        String template = loadTemplate();
+        return template
+                .replace("${nomeMorador}", escapeHtml(pessoaUnidade.getPessoa().getNome()))
+                .replace("${nomeCondominio}", escapeHtml(pessoaUnidade.getCondominio().getNome()))
+                .replace("${numeroUnidade}", escapeHtml(pessoaUnidade.getUnidade().getIdentificacao()))
+                .replace("${linkConvite}", escapeHtml(inviteUrl));
+    }
 
-                Voce recebeu um convite para criar sua conta na plataforma CondoManager.
+    private String loadTemplate() {
+        try {
+            ClassPathResource resource = new ClassPathResource(TEMPLATE_PATH);
+            return StreamUtils.copyToString(resource.getInputStream(), StandardCharsets.UTF_8);
+        } catch (IOException ex) {
+            throw new IllegalStateException("Template de e-mail do convite do morador nao encontrado.", ex);
+        }
+    }
 
-                Condominio: %s
-                Unidade: %s
-
-                Para concluir seu cadastro, acesse o link abaixo e defina sua senha:
-                %s
-
-                Se voce nao esperava este convite, ignore esta mensagem.
-                """.formatted(nome, condominio, unidade, inviteUrl);
+    private String escapeHtml(String value) {
+        return HtmlUtils.htmlEscape(value == null ? "" : value, StandardCharsets.UTF_8.name());
     }
 }
