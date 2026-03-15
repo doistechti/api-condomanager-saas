@@ -9,7 +9,7 @@ echo "==> Atualizando código..."
 git pull
 
 echo "==> Rebuildando imagem da API..."
-docker compose build --no-cache api-condomanager-saas
+docker compose build api-condomanager-saas
 
 echo "==> Subindo container da API..."
 docker compose up -d api-condomanager-saas
