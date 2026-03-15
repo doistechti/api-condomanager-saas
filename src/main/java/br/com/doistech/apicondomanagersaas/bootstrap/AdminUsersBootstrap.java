@@ -48,7 +48,7 @@ public class AdminUsersBootstrap implements CommandLineRunner {
 
     private void criarAdminSaas() {
 
-        String email = "brenno.agostini@gmail.com";
+        String email = "brenno.agostini.adm@gmail.com";
 
         if (usuarioRepository.existsByEmail(email)) {
             log.info("Admin SaaS '{}' já existe — ignorando criação", email);
