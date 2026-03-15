@@ -16,7 +16,7 @@ public enum MoradorTipo {
 
     @JsonValue
     public String toJson() {
-        return name().toLowerCase(Locale.ROOT);
+        return name();
     }
 
     @JsonCreator

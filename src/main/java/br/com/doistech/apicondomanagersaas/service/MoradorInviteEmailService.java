@@ -55,11 +55,11 @@ public class MoradorInviteEmailService {
             helper.setText(buildHtmlBody(pessoaUnidade, inviteUrl), true);
             mailSender.send(message);
         } catch (MailAuthenticationException ex) {
-            throw new IllegalStateException("Falha ao autenticar no servidor SMTP. Verifique as credenciais de e-mail.", ex);
+            throw new BadRequestException("Falha ao autenticar no servidor SMTP. Verifique as credenciais de e-mail.");
         } catch (MailException ex) {
-            throw new IllegalStateException("Falha ao enviar e-mail de convite do morador.", ex);
+            throw new BadRequestException("Falha ao enviar e-mail de convite do morador.");
         } catch (Exception ex) {
-            throw new IllegalStateException("Falha ao montar o template de e-mail do convite do morador.", ex);
+            throw new BadRequestException("Falha ao montar o template de e-mail do convite do morador.");
         }
     }
 
@@ -88,7 +88,7 @@ public class MoradorInviteEmailService {
             ClassPathResource resource = new ClassPathResource(TEMPLATE_PATH);
             return StreamUtils.copyToString(resource.getInputStream(), StandardCharsets.UTF_8);
         } catch (IOException ex) {
-            throw new IllegalStateException("Template de e-mail do convite do morador nao encontrado.", ex);
+            throw new BadRequestException("Template de e-mail do convite do morador nao encontrado.");
         }
     }
 

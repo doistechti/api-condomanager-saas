@@ -33,8 +33,8 @@ public class MoradorController {
     ) {
         validateCreateRequest(req);
 
-        MoradorTipo moradorTipo = req.moradorTipo() != null ? req.moradorTipo() : MoradorTipo.INQUILINO;
-        boolean isTipoProprietario = moradorTipo == MoradorTipo.PROPRIETARIO;
+        MoradorTipo moradorTipo = resolveMoradorTipo(req.moradorTipo(), req.ehProprietario());
+        boolean isTipoProprietario = Boolean.TRUE.equals(req.ehProprietario()) || moradorTipo == MoradorTipo.PROPRIETARIO;
         boolean principal = Boolean.TRUE.equals(req.principal());
 
         PessoaUnidadeCreateRequest fixed = new PessoaUnidadeCreateRequest(
@@ -64,8 +64,8 @@ public class MoradorController {
     ) {
         validateUpdateRequest(req);
 
-        MoradorTipo moradorTipo = req.moradorTipo() != null ? req.moradorTipo() : MoradorTipo.INQUILINO;
-        boolean isTipoProprietario = moradorTipo == MoradorTipo.PROPRIETARIO;
+        MoradorTipo moradorTipo = resolveMoradorTipo(req.moradorTipo(), req.ehProprietario());
+        boolean isTipoProprietario = Boolean.TRUE.equals(req.ehProprietario()) || moradorTipo == MoradorTipo.PROPRIETARIO;
         boolean principal = Boolean.TRUE.equals(req.principal());
 
         PessoaUnidadeUpdateRequest fixed = new PessoaUnidadeUpdateRequest(
@@ -102,6 +102,9 @@ public class MoradorController {
         if (req.unidadeId() == null) {
             throw new BadRequestException("unidadeId e obrigatorio.");
         }
+        if (req.pessoaId() == null && (req.cpfCnpj() == null || req.cpfCnpj().isBlank())) {
+            throw new BadRequestException("cpfCnpj e obrigatorio para criar um morador novo.");
+        }
         if (req.pessoaId() == null && (req.nome() == null || req.nome().isBlank())) {
             throw new BadRequestException("Nome e obrigatorio para criar um morador novo.");
         }
@@ -111,5 +114,15 @@ public class MoradorController {
         if (req == null) {
             throw new BadRequestException("Body da requisicao e obrigatorio.");
         }
+    }
+
+    private MoradorTipo resolveMoradorTipo(MoradorTipo moradorTipo, Boolean ehProprietario) {
+        if (moradorTipo != null) {
+            return moradorTipo;
+        }
+        if (Boolean.TRUE.equals(ehProprietario)) {
+            return MoradorTipo.PROPRIETARIO;
+        }
+        return MoradorTipo.INQUILINO;
     }
 }

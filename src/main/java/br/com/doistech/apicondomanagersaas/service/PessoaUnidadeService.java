@@ -18,6 +18,8 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Objects;
+import java.util.Optional;
 import java.util.UUID;
 
 @Service
@@ -32,21 +34,38 @@ public class PessoaUnidadeService {
     private final MoradorInviteEmailService moradorInviteEmailService;
 
     public PessoaUnidadeResponse create(PessoaUnidadeCreateRequest req) {
-        boolean principal = resolvePrincipalOnCreate(req);
-
         Condominio condominio = condominioService.getEntity(req.condominioId());
 
         var unidade = unidadeRepository.findByIdAndCondominioId(req.unidadeId(), req.condominioId())
                 .orElseThrow(() -> new NotFoundException("Unidade nao encontrada para este condominio"));
 
-        Pessoa pessoa = resolvePessoa(req);
+        if (req.pessoaId() == null && normalizeCpf(req.cpfCnpj()) == null) {
+            throw new BadRequestException("cpfCnpj e obrigatorio para criar um morador novo.");
+        }
 
-        var existenteOpt = repository.findAllByCondominioIdAndUnidadeIdAndAtivoTrue(req.condominioId(), req.unidadeId())
-                .stream()
-                .filter(v -> v.getPessoa().getId().equals(pessoa.getId()))
-                .findFirst();
+        List<PessoaUnidade> vinculosAtivos = repository.findAllByCondominioIdAndUnidadeIdAndAtivoTrue(
+                req.condominioId(), req.unidadeId()
+        );
 
-        PessoaUnidade pu = existenteOpt.orElseGet(PessoaUnidade::new);
+        // A regra operacional do cadastro e por cpf+unidade:
+        // mesmo cpf na mesma unidade -> atualiza o vinculo existente;
+        // cpf diferente na mesma unidade -> cria um novo vinculo;
+        // se ja existir principal na unidade, o novo vinculo entra como secundario.
+        Optional<PessoaUnidade> vinculoExistenteOpt = findVinculoByCpf(vinculosAtivos, req.cpfCnpj());
+
+        PessoaUnidade pu;
+        Pessoa pessoa;
+        boolean principal;
+
+        if (vinculoExistenteOpt.isPresent()) {
+            pu = vinculoExistenteOpt.get();
+            pessoa = pu.getPessoa();
+            principal = resolvePrincipalOnUpdate(req.condominioId(), req.unidadeId(), pu.getId(), req.principal());
+        } else {
+            pessoa = resolvePessoa(req);
+            pu = new PessoaUnidade();
+            principal = resolvePrincipalOnCreate(vinculosAtivos, req.principal());
+        }
 
         pu.setCondominio(condominio);
         pu.setUnidade(unidade);
@@ -204,14 +223,12 @@ public class PessoaUnidadeService {
         return pessoaRepository.save(p);
     }
 
-    private boolean resolvePrincipalOnCreate(PessoaUnidadeCreateRequest req) {
-        if (!Boolean.TRUE.equals(req.principal())) {
+    private boolean resolvePrincipalOnCreate(List<PessoaUnidade> vinculosAtivos, Boolean requestedPrincipal) {
+        if (!Boolean.TRUE.equals(requestedPrincipal)) {
             return false;
         }
 
-        boolean jaExiste = repository.existsByCondominioIdAndUnidadeIdAndPrincipalTrueAndAtivoTrue(
-                req.condominioId(), req.unidadeId()
-        );
+        boolean jaExiste = vinculosAtivos.stream().anyMatch(v -> Boolean.TRUE.equals(v.getPrincipal()));
         return !jaExiste;
     }
 
@@ -224,5 +241,26 @@ public class PessoaUnidadeService {
                 condominioId, unidadeId, id
         );
         return !jaExisteOutro;
+    }
+
+    private Optional<PessoaUnidade> findVinculoByCpf(List<PessoaUnidade> vinculosAtivos, String cpfCnpj) {
+        String normalizedCpf = normalizeCpf(cpfCnpj);
+        if (normalizedCpf == null) {
+            return Optional.empty();
+        }
+
+        return vinculosAtivos.stream()
+                .filter(v -> v.getPessoa() != null)
+                .filter(v -> Objects.equals(normalizedCpf, normalizeCpf(v.getPessoa().getCpfCnpj())))
+                .findFirst();
+    }
+
+    private String normalizeCpf(String cpfCnpj) {
+        if (cpfCnpj == null || cpfCnpj.isBlank()) {
+            return null;
+        }
+
+        String digits = cpfCnpj.replaceAll("\\D", "");
+        return digits.isBlank() ? null : digits;
     }
 }

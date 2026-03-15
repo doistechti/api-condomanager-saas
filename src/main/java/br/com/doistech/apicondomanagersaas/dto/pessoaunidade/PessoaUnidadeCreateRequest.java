@@ -22,13 +22,13 @@ public record PessoaUnidadeCreateRequest(
         String telefone,
 
         @NotNull
-        @JsonAlias({"isProprietario", "proprietario"})
+        @JsonAlias({"isProprietario", "proprietario", "is_owner", "owner", "titular"})
         Boolean ehProprietario,
         @NotNull
-        @JsonAlias({"isMorador", "morador"})
+        @JsonAlias({"isMorador", "morador", "resident"})
         Boolean ehMorador,
 
-        @JsonAlias({"tipoMoradia", "tipo_moradia"})
+        @JsonAlias({"tipoMoradia", "tipo_moradia", "tipo", "tipo_morador", "morador_tipo"})
         MoradorTipo moradorTipo,
 
         @NotNull Boolean principal,
