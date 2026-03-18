@@ -71,7 +71,7 @@ public class MoradorInviteEmailService {
 
     private String buildSubject(PessoaUnidade pessoaUnidade) {
         String nomeCondominio = pessoaUnidade.getCondominio() != null ? pessoaUnidade.getCondominio().getNome() : "";
-        return "[" + nomeCondominio + "] - Ative seu acesso ao Sistema do Condominio.";
+        return nomeCondominio + " - Ative seu acesso ao Sistema do Condominio.";
     }
 
     private String buildHtmlBody(PessoaUnidade pessoaUnidade, String inviteUrl) {

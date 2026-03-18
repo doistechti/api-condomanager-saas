@@ -11,6 +11,7 @@ import br.com.doistech.apicondomanagersaas.repository.PessoaUnidadeRepository;
 import br.com.doistech.apicondomanagersaas.repository.UsuarioRepository;
 import br.com.doistech.apicondomanagersaas.repository.VinculoUnidadeRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -20,6 +21,7 @@ import java.util.Comparator;
 import java.util.List;
 
 @Service
+@Slf4j
 @RequiredArgsConstructor
 public class MoradorScopeService {
 
@@ -68,14 +70,25 @@ public class MoradorScopeService {
                 .toList();
 
         var condominio = condominioService.getEntity(usuario.getCondominioId());
-        var vinculoOperacional = resolveVinculoOperacional(principal);
+        Long vinculoPrincipalId = principal.getId();
+        try {
+            vinculoPrincipalId = resolveVinculoOperacional(principal).getId();
+        } catch (RuntimeException ex) {
+            log.warn(
+                    "Falha ao resolver vinculo operacional do morador. usuarioId={}, pessoaUnidadeId={}, condominioId={}",
+                    usuario.getId(),
+                    principal.getId(),
+                    usuario.getCondominioId(),
+                    ex
+            );
+        }
 
         return new MoradorScopeResponse(
                 usuario.getId(),
                 usuario.getCondominioId(),
                 condominio.getNome(),
                 principal.getPessoa().getId(),
-                vinculoOperacional.getId(),
+                vinculoPrincipalId,
                 unidadeIds
         );
     }
