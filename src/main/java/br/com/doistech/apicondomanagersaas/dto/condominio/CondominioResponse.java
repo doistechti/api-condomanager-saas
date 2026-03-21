@@ -2,6 +2,8 @@ package br.com.doistech.apicondomanagersaas.dto.condominio;
 
 import br.com.doistech.apicondomanagersaas.domain.assinatura.AssinaturaStatus;
 
+import java.time.LocalDateTime;
+
 public record CondominioResponse(
         Long id,
         String nome,
@@ -15,6 +17,8 @@ public record CondominioResponse(
         Long planoId,
         String planoNome,
         Long unidadesCount,
-        AssinaturaStatus assinaturaStatus
+        AssinaturaStatus assinaturaStatus,
+        Long adminUserId,
+        LocalDateTime conviteAdminEnviadoEm
 ) {
 }

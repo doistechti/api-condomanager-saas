@@ -7,11 +7,10 @@ import br.com.doistech.apicondomanagersaas.dto.documento.DocumentoResponse;
 import br.com.doistech.apicondomanagersaas.dto.documento.DocumentoUpdateRequest;
 import br.com.doistech.apicondomanagersaas.mapper.DocumentoMapper;
 import br.com.doistech.apicondomanagersaas.repository.DocumentoCondominioRepository;
+import br.com.doistech.apicondomanagersaas.service.storage.S3StorageService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
-import java.net.URI;
-import java.nio.file.*;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -22,6 +21,7 @@ public class DocumentoCondominioService {
     private final DocumentoCondominioRepository repository;
     private final CondominioService condominioService;
     private final DocumentoMapper mapper;
+    private final S3StorageService storageService;
 
     public DocumentoResponse create(DocumentoCreateRequest req) {
         DocumentoCondominio entity = DocumentoCondominio.builder()
@@ -58,47 +58,14 @@ public class DocumentoCondominioService {
                 .stream().map(mapper::toResponse).toList();
     }
 
-    public void delete(Long id, Long condominioId, String uploadsDir) {
+    public void delete(Long id, Long condominioId) {
         DocumentoCondominio entity = getEntity(id, condominioId);
-
-        // MVP: tenta apagar o arquivo físico se for URL local /uploads/...
-        tryDeleteLocalFile(entity.getArquivoUrl(), uploadsDir);
-
+        storageService.deleteByUrl(entity.getArquivoUrl());
         repository.delete(entity);
     }
 
     private DocumentoCondominio getEntity(Long id, Long condominioId) {
         return repository.findByIdAndCondominioId(id, condominioId)
                 .orElseThrow(() -> new NotFoundException("Documento não encontrado: " + id));
-    }
-
-    private void tryDeleteLocalFile(String arquivoUrl, String uploadsDir) {
-        if (arquivoUrl == null) return;
-
-        String pathPart = null;
-        try {
-            // Se vier URL absoluta, extrai o path
-            URI uri = URI.create(arquivoUrl);
-            pathPart = uri.getPath();
-        } catch (Exception ignored) {
-            // pode ser só um path "/uploads/.."
-            pathPart = arquivoUrl;
-        }
-
-        if (pathPart == null || !pathPart.startsWith("/uploads/")) return;
-
-        // remove prefixo "/uploads/"
-        String relative = pathPart.substring("/uploads/".length());
-        Path base = Path.of(uploadsDir).toAbsolutePath().normalize();
-        Path target = base.resolve(relative).normalize();
-
-        // Anti path traversal: só apaga se ainda estiver dentro de uploadsDir
-        if (!target.startsWith(base)) return;
-
-        try {
-            Files.deleteIfExists(target);
-        } catch (Exception ignored) {
-            // MVP: não falha o delete do registro se não conseguir apagar o arquivo
-        }
     }
 }

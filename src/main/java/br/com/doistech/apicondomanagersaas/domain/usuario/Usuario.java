@@ -4,6 +4,7 @@ import br.com.doistech.apicondomanagersaas.domain.role.Role;
 import jakarta.persistence.*;
 import lombok.*;
 
+import java.time.LocalDateTime;
 import java.util.HashSet;
 import java.util.Set;
 
@@ -34,6 +35,12 @@ public class Usuario {
 
     @Column(name = "condominio_id")
     private Long condominioId;
+
+    @Column(name = "reset_senha_token_hash", length = 64)
+    private String resetSenhaTokenHash;
+
+    @Column(name = "reset_senha_expira_em")
+    private LocalDateTime resetSenhaExpiraEm;
 
     @ManyToMany(fetch = FetchType.EAGER)
     @JoinTable(

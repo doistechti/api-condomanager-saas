@@ -4,12 +4,14 @@ import br.com.doistech.apicondomanagersaas.common.exception.NotFoundException;
 import br.com.doistech.apicondomanagersaas.domain.assinatura.Assinatura;
 import br.com.doistech.apicondomanagersaas.domain.assinatura.AssinaturaStatus;
 import br.com.doistech.apicondomanagersaas.domain.condominio.Condominio;
+import br.com.doistech.apicondomanagersaas.repository.CondominioAdminInviteRepository;
 import br.com.doistech.apicondomanagersaas.dto.condominio.CondominioCreateRequest;
 import br.com.doistech.apicondomanagersaas.dto.condominio.CondominioResponse;
 import br.com.doistech.apicondomanagersaas.dto.condominio.CondominioUpdateRequest;
 import br.com.doistech.apicondomanagersaas.repository.AssinaturaRepository;
 import br.com.doistech.apicondomanagersaas.repository.CondominioRepository;
 import br.com.doistech.apicondomanagersaas.repository.PlanoRepository;
+import br.com.doistech.apicondomanagersaas.repository.UsuarioRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -24,6 +26,9 @@ public class CondominioService {
 
     private final CondominioRepository repository;
     private final PlanoRepository planoRepository;
+    private final CondominioAdminInviteService condominioAdminInviteService;
+    private final UsuarioRepository usuarioRepository;
+    private final CondominioAdminInviteRepository condominioAdminInviteRepository;
 
     // ✅ Novo: repositório de assinatura
     private final AssinaturaRepository assinaturaRepository;
@@ -54,6 +59,8 @@ public class CondominioService {
         if (saved.getPlano() != null) {
             criarAssinaturaInicialSeNaoExistir(saved);
         }
+
+        condominioAdminInviteService.createAndSendInviteIfPossible(saved);
 
         return toResponse(saved);
     }
@@ -111,6 +118,12 @@ public class CondominioService {
         // (opcional) se quiser, pode cancelar assinaturas antes de deletar
         // por enquanto, vamos manter simples e deletar o condomínio direto.
         repository.delete(entity);
+    }
+
+    @Transactional
+    public br.com.doistech.apicondomanagersaas.dto.auth.CondominioAdminInviteResponse resendAdminInvite(Long id) {
+        Condominio condominio = getEntity(id);
+        return condominioAdminInviteService.resendInvite(id, condominio);
     }
 
     Condominio getEntity(Long id) {
@@ -201,6 +214,19 @@ public class CondominioService {
                 .map(Assinatura::getStatus)
                 .orElse(null);
 
+        Long adminUserId = usuarioRepository.findFirstAdminCondominioUserIdByCondominioId(entity.getId())
+                .orElse(null);
+
+        var conviteAdminEnviadoEm = adminUserId != null
+                ? null
+                : condominioAdminInviteRepository
+                .findTopByCondominioIdAndAtivoTrueAndAceitoEmIsNullAndExpiraEmAfterOrderByCreatedAtDesc(
+                        entity.getId(),
+                        LocalDateTime.now()
+                )
+                .map(invite -> invite.getEnviadoEm())
+                .orElse(null);
+
         return new CondominioResponse(
                 entity.getId(),
                 entity.getNome(),
@@ -214,7 +240,9 @@ public class CondominioService {
                 planoId,
                 planoNome,
                 unidadesCount,
-                assinaturaStatus
+                assinaturaStatus,
+                adminUserId,
+                conviteAdminEnviadoEm
         );
     }
 }

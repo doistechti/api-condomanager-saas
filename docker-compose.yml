@@ -50,6 +50,12 @@ services:
       BANCO_SENHA_PRD: ${BANCO_SENHA_PRD}
       APP_JWT_SECRET: ${APP_JWT_SECRET}
       APP_JWT_EXPIRATION_MINUTES: ${APP_JWT_EXPIRATION_MINUTES:-480}
+      APP_S3_REGION: ${APP_S3_REGION}
+      APP_S3_BUCKET: ${APP_S3_BUCKET}
+      APP_S3_ACCESS_KEY: ${APP_S3_ACCESS_KEY}
+      APP_S3_SECRET_KEY: ${APP_S3_SECRET_KEY}
+      APP_S3_ENDPOINT: ${APP_S3_ENDPOINT:-}
+      APP_S3_PATH_STYLE_ACCESS: ${APP_S3_PATH_STYLE_ACCESS:-false}
       APP_MAIL_FROM: ${APP_MAIL_FROM}
       APP_FRONTEND_BASE_URL: ${APP_FRONTEND_BASE_URL}
       APP_FRONTEND_MORADOR_CONVITE_PATH: ${APP_FRONTEND_MORADOR_CONVITE_PATH:-/convite/morador}
@@ -61,10 +67,7 @@ services:
       SMTP_AUTH: ${SMTP_AUTH:-true}
       SMTP_STARTTLS: ${SMTP_STARTTLS:-true}
       JAVA_TOOL_OPTIONS: >-
-        -Dapp.uploads.dir=/opt/condomanager/uploads
         -Dfile.encoding=UTF-8
-    volumes:
-      - condo_uploads:/opt/condomanager/uploads
 
     networks:
       - web
@@ -76,15 +79,8 @@ services:
       - "traefik.http.routers.condotech.tls.certresolver=le"
       - "traefik.http.services.condotech.loadbalancer.server.port=8080"
 volumes:
-  condo_uploads:
   letsencrypt:
 
 networks:
   web:
     driver: bridge
-
-# VM options para execucao pela IDE: PROD
-# -DBANCO_HOST_PRD=database-doistech.cpke4uyawwd9.sa-east-1.rds.amazonaws.com -DBANCO_PORTA_PRD=3306 -DBANCO_SCHEMA_PRD=condotech_dev -DBANCO_USUARIO_PRD=doistechdba -DBANCO_SENHA_PRD=31BFC597A7B405A37235CA1629F3ABDE6A1FEF48 -DAPP_JWT_SECRET=s8exZIabrST7iwJUF9NFdYEpEzs1Mdz20dxwmY9B8Pb -DAPP_JWT_EXPIRATION_MINUTES=480 -DAPP_MAIL_FROM=doistechti@gmail.com -DAPP_FRONTEND_BASE_URL=https://condominiotech.doistech.com.br -DAPP_FRONTEND_MORADOR_CONVITE_PATH=/convite/morador -DAPP_CONVITE_MORADOR_EXPIRATION_HOURS=72 -DSMTP_HOST=smtp.gmail.com -DSMTP_PORT=587 -DSMTP_USERNAME=doistechti@gmail.com -DSMTP_PASSWORD="emta rrsx qqnd eytj" -DSMTP_AUTH=true -DSMTP_STARTTLS=true
-
-# VM options para execucao pela IDE: LOCAL
-# -DBANCO_HOST_PRD=database-doistech.cpke4uyawwd9.sa-east-1.rds.amazonaws.com -DBANCO_PORTA_PRD=3306 -DBANCO_SCHEMA_PRD=condotech_dev -DBANCO_USUARIO_PRD=doistechdba -DBANCO_SENHA_PRD=31BFC597A7B405A37235CA1629F3ABDE6A1FEF48 -DAPP_JWT_SECRET=s8exZIabrST7iwJUF9NFdYEpEzs1Mdz20dxwmY9B8Pb -DAPP_JWT_EXPIRATION_MINUTES=480 -DAPP_MAIL_FROM=doistechti@gmail.com -DAPP_FRONTEND_BASE_URL=http://localhost:5173 -DAPP_FRONTEND_MORADOR_CONVITE_PATH=/convite/morador -DAPP_CONVITE_MORADOR_EXPIRATION_HOURS=72 -DSMTP_HOST=smtp.gmail.com -DSMTP_PORT=587 -DSMTP_USERNAME=doistechti@gmail.com -DSMTP_PASSWORD="emta rrsx qqnd eytj" -DSMTP_AUTH=true -DSMTP_STARTTLS=true

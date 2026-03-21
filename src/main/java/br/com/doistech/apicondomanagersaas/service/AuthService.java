@@ -12,6 +12,8 @@ import br.com.doistech.apicondomanagersaas.dto.auth.LoginResponse;
 import br.com.doistech.apicondomanagersaas.dto.auth.MeResponse;
 import br.com.doistech.apicondomanagersaas.dto.auth.MoradorInviteAcceptRequest;
 import br.com.doistech.apicondomanagersaas.dto.auth.MoradorInviteResponse;
+import br.com.doistech.apicondomanagersaas.dto.auth.ForgotPasswordRequest;
+import br.com.doistech.apicondomanagersaas.dto.auth.ResetPasswordRequest;
 import br.com.doistech.apicondomanagersaas.repository.PessoaUnidadeRepository;
 import br.com.doistech.apicondomanagersaas.repository.RoleRepository;
 import br.com.doistech.apicondomanagersaas.repository.UsuarioRepository;
@@ -20,9 +22,13 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Set;
+import java.util.UUID;
 
 @Service
 public class AuthService {
@@ -33,6 +39,8 @@ public class AuthService {
     private final PasswordEncoder passwordEncoder;
     private final JwtUtil jwtUtil;
     private final int moradorInviteExpirationHours;
+    private final int resetPasswordExpirationMinutes;
+    private final PasswordResetEmailService passwordResetEmailService;
 
     public AuthService(
             UsuarioRepository usuarioRepository,
@@ -40,7 +48,9 @@ public class AuthService {
             RoleRepository roleRepository,
             PasswordEncoder passwordEncoder,
             JwtUtil jwtUtil,
-            @Value("${app.convite.morador.expiration-hours:72}") int moradorInviteExpirationHours
+            PasswordResetEmailService passwordResetEmailService,
+            @Value("${app.convite.morador.expiration-hours:72}") int moradorInviteExpirationHours,
+            @Value("${app.auth.reset-password.expiration-minutes:30}") int resetPasswordExpirationMinutes
     ) {
         this.usuarioRepository = usuarioRepository;
         this.pessoaUnidadeRepository = pessoaUnidadeRepository;
@@ -48,6 +58,8 @@ public class AuthService {
         this.passwordEncoder = passwordEncoder;
         this.jwtUtil = jwtUtil;
         this.moradorInviteExpirationHours = moradorInviteExpirationHours;
+        this.resetPasswordExpirationMinutes = resetPasswordExpirationMinutes;
+        this.passwordResetEmailService = passwordResetEmailService;
     }
 
     public LoginResponse login(LoginRequest req) {
@@ -83,6 +95,47 @@ public class AuthService {
 
         List<String> roles = usuario.getRoles().stream().map(Role::getNome).toList();
         return new MeResponse(usuario.getId(), usuario.getNome(), usuario.getEmail(), usuario.getCondominioId(), roles);
+    }
+
+    @Transactional
+    public void requestPasswordReset(ForgotPasswordRequest request) {
+        String email = normalizeEmail(request.email());
+        if (email == null) {
+            return;
+        }
+
+        Usuario usuario = usuarioRepository.findByEmail(email).orElse(null);
+        if (usuario == null || Boolean.FALSE.equals(usuario.getAtivo())) {
+            return;
+        }
+
+        String rawToken = UUID.randomUUID().toString();
+        usuario.setResetSenhaTokenHash(hashToken(rawToken));
+        usuario.setResetSenhaExpiraEm(LocalDateTime.now().plusMinutes(Math.max(resetPasswordExpirationMinutes, 1)));
+        usuarioRepository.save(usuario);
+
+        passwordResetEmailService.sendResetPasswordEmail(usuario, rawToken);
+    }
+
+    @Transactional
+    public void resetPassword(ResetPasswordRequest request) {
+        if (request.token() == null || request.token().isBlank()) {
+            throw new BadRequestException("Token de recuperacao e obrigatorio.");
+        }
+
+        String tokenHash = hashToken(request.token());
+        Usuario usuario = usuarioRepository.findByResetSenhaTokenHash(tokenHash)
+                .orElseThrow(() -> new BadRequestException("Token de recuperacao invalido ou expirado."));
+
+        if (usuario.getResetSenhaExpiraEm() == null || usuario.getResetSenhaExpiraEm().isBefore(LocalDateTime.now())) {
+            clearResetPasswordToken(usuario);
+            usuarioRepository.save(usuario);
+            throw new BadRequestException("Token de recuperacao invalido ou expirado.");
+        }
+
+        usuario.setSenha(passwordEncoder.encode(request.senha()));
+        clearResetPasswordToken(usuario);
+        usuarioRepository.save(usuario);
     }
 
     @Transactional(readOnly = true)
@@ -183,5 +236,24 @@ public class AuthService {
         }
         String normalized = email.trim().toLowerCase();
         return normalized.isBlank() ? null : normalized;
+    }
+
+    private void clearResetPasswordToken(Usuario usuario) {
+        usuario.setResetSenhaTokenHash(null);
+        usuario.setResetSenhaExpiraEm(null);
+    }
+
+    private String hashToken(String token) {
+        try {
+            MessageDigest digest = MessageDigest.getInstance("SHA-256");
+            byte[] hash = digest.digest(token.trim().getBytes(StandardCharsets.UTF_8));
+            StringBuilder builder = new StringBuilder(hash.length * 2);
+            for (byte b : hash) {
+                builder.append(String.format("%02x", b));
+            }
+            return builder.toString();
+        } catch (NoSuchAlgorithmException ex) {
+            throw new IllegalStateException("Algoritmo de hash nao suportado.", ex);
+        }
     }
 }

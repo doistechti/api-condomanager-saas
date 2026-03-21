@@ -3,6 +3,7 @@ package br.com.doistech.apicondomanagersaas.controller;
 import br.com.doistech.apicondomanagersaas.dto.condominio.CondominioCreateRequest;
 import br.com.doistech.apicondomanagersaas.dto.condominio.CondominioResponse;
 import br.com.doistech.apicondomanagersaas.dto.condominio.CondominioUpdateRequest;
+import br.com.doistech.apicondomanagersaas.dto.auth.CondominioAdminInviteResponse;
 import br.com.doistech.apicondomanagersaas.service.CondominioService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -43,5 +44,10 @@ public class CondominioController {
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void delete(@PathVariable Long id) {
         service.delete(id);
+    }
+
+    @PostMapping("/{id}/convite-admin")
+    public CondominioAdminInviteResponse resendAdminInvite(@PathVariable Long id) {
+        return service.resendAdminInvite(id);
     }
 }
