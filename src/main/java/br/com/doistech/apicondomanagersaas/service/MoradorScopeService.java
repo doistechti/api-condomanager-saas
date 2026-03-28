@@ -94,12 +94,11 @@ public class MoradorScopeService {
     }
 
     private VinculoUnidade resolveVinculoOperacional(PessoaUnidade principal) {
-        var vinculo = vinculoUnidadeRepository
-                .findByCondominioIdAndPessoaIdAndUnidadeId(
-                        principal.getCondominio().getId(),
-                        principal.getPessoa().getId(),
-                        principal.getUnidade().getId()
-                )
+        Long condominioId = principal.getCondominio().getId();
+        Long pessoaId = principal.getPessoa().getId();
+        Long unidadeId = principal.getUnidade().getId();
+
+        var vinculo = findVinculoOperacional(condominioId, pessoaId, unidadeId)
                 .orElseGet(() -> vinculoUnidadeRepository.save(
                         VinculoUnidade.builder()
                                 .condominio(principal.getCondominio())
@@ -149,6 +148,27 @@ public class MoradorScopeService {
         }
 
         return vinculo;
+    }
+
+    private java.util.Optional<VinculoUnidade> findVinculoOperacional(Long condominioId, Long pessoaId, Long unidadeId) {
+        List<VinculoUnidade> vinculos = vinculoUnidadeRepository
+                .findAllByCondominioIdAndPessoaIdAndUnidadeIdOrderByDataFimAscUpdatedAtDescCreatedAtDescIdDesc(
+                        condominioId,
+                        pessoaId,
+                        unidadeId
+                );
+
+        if (vinculos.size() > 1) {
+            log.warn(
+                    "Duplicidade em vinculos_unidade para condominioId={}, pessoaId={}, unidadeId={}. Usando vinculoId={}.",
+                    condominioId,
+                    pessoaId,
+                    unidadeId,
+                    vinculos.get(0).getId()
+            );
+        }
+
+        return vinculos.stream().findFirst();
     }
 
     private TipoMoradia resolveTipoMoradia(PessoaUnidade principal) {

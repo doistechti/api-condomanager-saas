@@ -3,6 +3,8 @@ package br.com.doistech.apicondomanagersaas.security;
 import br.com.doistech.apicondomanagersaas.config.JwtUtil;
 import jakarta.servlet.*;
 import jakarta.servlet.http.*;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -11,6 +13,8 @@ import org.springframework.web.filter.OncePerRequestFilter;
 
 @Component
 public class JwtAuthFilter extends OncePerRequestFilter {
+
+    private static final Logger log = LoggerFactory.getLogger(JwtAuthFilter.class);
 
     private final JwtUtil jwtUtil;
     private final CustomUserDetailsService userDetailsService;
@@ -24,9 +28,9 @@ public class JwtAuthFilter extends OncePerRequestFilter {
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
             throws ServletException, java.io.IOException {
 
-        String auth = request.getHeader("Authorization");
+        String auth = normalizeAuthorizationHeader(request.getHeader("Authorization"));
 
-        if (auth != null && auth.startsWith("Bearer ")) {
+        if (hasBearerToken(auth)) {
             String token = auth.substring(7);
 
             try {
@@ -46,11 +50,21 @@ public class JwtAuthFilter extends OncePerRequestFilter {
                 }
 
             } catch (Exception ex) {
-                // Token inválido/expirado -> não autentica
-                // (deixa o Security bloquear com 401)
+                log.warn("Falha ao autenticar JWT em {} {}: {}",
+                        request.getMethod(),
+                        request.getRequestURI(),
+                        ex.getMessage());
             }
         }
 
         filterChain.doFilter(request, response);
+    }
+
+    private String normalizeAuthorizationHeader(String authHeader) {
+        return authHeader == null ? null : authHeader.trim();
+    }
+
+    private boolean hasBearerToken(String authHeader) {
+        return authHeader != null && authHeader.regionMatches(true, 0, "Bearer ", 0, 7);
     }
 }

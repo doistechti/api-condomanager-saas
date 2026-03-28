@@ -11,6 +11,9 @@ public interface VinculoUnidadeRepository extends JpaRepository<VinculoUnidade, 
     List<VinculoUnidade> findAllByUnidadeIdAndCondominioId(Long unidadeId, Long condominioId);
     Optional<VinculoUnidade> findByIdAndCondominioId(Long id, Long condominioId);
 
-    // ✅ necessário para o MORADOR: mapear PessoaUnidade -> VinculoUnidade
-    Optional<VinculoUnidade> findByCondominioIdAndPessoaIdAndUnidadeId(Long condominioId, Long pessoaId, Long unidadeId);
+    List<VinculoUnidade> findAllByCondominioIdAndPessoaIdAndUnidadeIdOrderByDataFimAscUpdatedAtDescCreatedAtDescIdDesc(
+            Long condominioId,
+            Long pessoaId,
+            Long unidadeId
+    );
 }

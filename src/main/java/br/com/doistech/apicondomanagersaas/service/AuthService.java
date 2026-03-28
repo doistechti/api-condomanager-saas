@@ -75,13 +75,14 @@ public class AuthService {
         }
 
         List<String> roles = usuario.getRoles().stream().map(Role::getNome).toList();
+        String displayName = resolveDisplayName(usuario, roles);
         String token = jwtUtil.generateToken(usuario.getEmail(), usuario.getId(), usuario.getCondominioId(), roles);
 
         return new LoginResponse(
                 token,
                 new LoginResponse.UsuarioMeResponse(
                         usuario.getId(),
-                        usuario.getNome(),
+                        displayName,
                         usuario.getEmail(),
                         usuario.getCondominioId(),
                         roles
@@ -94,7 +95,8 @@ public class AuthService {
                 .orElseThrow(() -> new RuntimeException("Usuario nao encontrado"));
 
         List<String> roles = usuario.getRoles().stream().map(Role::getNome).toList();
-        return new MeResponse(usuario.getId(), usuario.getNome(), usuario.getEmail(), usuario.getCondominioId(), roles);
+        String displayName = resolveDisplayName(usuario, roles);
+        return new MeResponse(usuario.getId(), displayName, usuario.getEmail(), usuario.getCondominioId(), roles);
     }
 
     @Transactional
@@ -189,18 +191,33 @@ public class AuthService {
         pessoaUnidadeRepository.save(vinculo);
 
         List<String> roles = usuario.getRoles().stream().map(Role::getNome).toList();
+        String displayName = resolveDisplayName(usuario, roles);
         String jwt = jwtUtil.generateToken(usuario.getEmail(), usuario.getId(), usuario.getCondominioId(), roles);
 
         return new LoginResponse(
                 jwt,
                 new LoginResponse.UsuarioMeResponse(
                         usuario.getId(),
-                        usuario.getNome(),
+                        displayName,
                         usuario.getEmail(),
                         usuario.getCondominioId(),
                         roles
                 )
         );
+    }
+
+    private String resolveDisplayName(Usuario usuario, List<String> roles) {
+        if (roles.contains("MORADOR")) {
+            return pessoaUnidadeRepository.findAllByUsuarioIdAndEhMoradorTrueAndAtivoTrue(usuario.getId()).stream()
+                    .sorted((a, b) -> Boolean.compare(Boolean.TRUE.equals(b.getPrincipal()), Boolean.TRUE.equals(a.getPrincipal())))
+                    .map(PessoaUnidade::getPessoa)
+                    .filter(pessoa -> pessoa != null && pessoa.getNome() != null && !pessoa.getNome().isBlank())
+                    .map(pessoa -> pessoa.getNome().trim())
+                    .findFirst()
+                    .orElse(usuario.getNome());
+        }
+
+        return usuario.getNome();
     }
 
     private PessoaUnidade getValidInvite(String token) {

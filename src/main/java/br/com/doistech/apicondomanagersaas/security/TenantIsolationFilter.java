@@ -6,6 +6,8 @@ import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
@@ -30,6 +32,7 @@ import java.util.regex.Pattern;
 public class TenantIsolationFilter extends OncePerRequestFilter {
 
     private static final Pattern CONDOMINIO_PATH = Pattern.compile("^/api/v1/condominios/(\\d+)(/.*)?$");
+    private static final Logger log = LoggerFactory.getLogger(TenantIsolationFilter.class);
 
     private final JwtUtil jwtUtil;
 
@@ -80,8 +83,8 @@ public class TenantIsolationFilter extends OncePerRequestFilter {
             }
 
             // Para os demais perfis, valida claim condominioId
-            String authHeader = request.getHeader("Authorization");
-            if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+            String authHeader = normalizeAuthorizationHeader(request.getHeader("Authorization"));
+            if (!hasBearerToken(authHeader)) {
                 // Sem token: deixa o SecurityConfig bloquear
                 filterChain.doFilter(request, response);
                 return;
@@ -92,6 +95,7 @@ public class TenantIsolationFilter extends OncePerRequestFilter {
             Object claim = jws.getPayload().get("condominioId");
 
             if (claim == null) {
+                log.warn("JWT sem claim condominioId em {} {}", request.getMethod(), request.getRequestURI());
                 response.setStatus(HttpServletResponse.SC_FORBIDDEN);
                 return;
             }
@@ -103,12 +107,18 @@ public class TenantIsolationFilter extends OncePerRequestFilter {
                 try {
                     tokenCondominioId = Long.parseLong(String.valueOf(claim));
                 } catch (NumberFormatException ex) {
+                    log.warn("Claim condominioId inválida em {} {}: {}", request.getMethod(), request.getRequestURI(), claim);
                     response.setStatus(HttpServletResponse.SC_FORBIDDEN);
                     return;
                 }
             }
 
             if (!pathCondominioId.equals(tokenCondominioId)) {
+                log.warn("Tenant mismatch em {} {}: pathCondominioId={}, tokenCondominioId={}",
+                        request.getMethod(),
+                        request.getRequestURI(),
+                        pathCondominioId,
+                        tokenCondominioId);
                 response.setStatus(HttpServletResponse.SC_FORBIDDEN);
                 return;
             }
@@ -116,11 +126,22 @@ public class TenantIsolationFilter extends OncePerRequestFilter {
             filterChain.doFilter(request, response);
 
         } catch (Exception ex) {
-            // Token inválido/expirado: deixa o SecurityConfig bloquear com 401
+            log.warn("Falha ao validar isolamento de tenant em {} {}: {}",
+                    request.getMethod(),
+                    request.getRequestURI(),
+                    ex.getMessage());
             filterChain.doFilter(request, response);
 
         } finally {
             RequestContext.clear();
         }
+    }
+
+    private String normalizeAuthorizationHeader(String authHeader) {
+        return authHeader == null ? null : authHeader.trim();
+    }
+
+    private boolean hasBearerToken(String authHeader) {
+        return authHeader != null && authHeader.regionMatches(true, 0, "Bearer ", 0, 7);
     }
 }

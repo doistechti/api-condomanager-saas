@@ -189,8 +189,7 @@ public class MoradorUsersBootstrap implements CommandLineRunner {
     }
 
     private void ensureVinculoOperacional(Condominio condominio, Unidade unidade, Pessoa pessoa) {
-        VinculoUnidade v = vinculoUnidadeRepository
-                .findByCondominioIdAndPessoaIdAndUnidadeId(condominio.getId(), pessoa.getId(), unidade.getId())
+        VinculoUnidade v = findVinculoOperacional(condominio.getId(), pessoa.getId(), unidade.getId())
                 .orElseGet(() -> {
                     VinculoUnidade novo = VinculoUnidade.builder()
                             .condominio(condominio)
@@ -235,5 +234,26 @@ public class MoradorUsersBootstrap implements CommandLineRunner {
             vinculoUnidadeRepository.save(v);
             log.info("VinculoUnidade corrigido para permitir reservas (id={})", v.getId());
         }
+    }
+
+    private java.util.Optional<VinculoUnidade> findVinculoOperacional(Long condominioId, Long pessoaId, Long unidadeId) {
+        var vinculos = vinculoUnidadeRepository
+                .findAllByCondominioIdAndPessoaIdAndUnidadeIdOrderByDataFimAscUpdatedAtDescCreatedAtDescIdDesc(
+                        condominioId,
+                        pessoaId,
+                        unidadeId
+                );
+
+        if (vinculos.size() > 1) {
+            log.warn(
+                    "Duplicidade em vinculos_unidade durante bootstrap. condominioId={}, pessoaId={}, unidadeId={}. Usando vinculoId={}.",
+                    condominioId,
+                    pessoaId,
+                    unidadeId,
+                    vinculos.get(0).getId()
+            );
+        }
+
+        return vinculos.stream().findFirst();
     }
 }
