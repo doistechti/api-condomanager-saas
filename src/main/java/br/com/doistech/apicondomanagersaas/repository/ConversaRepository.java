@@ -5,6 +5,7 @@ import br.com.doistech.apicondomanagersaas.domain.chat.ConversaStatus;
 import br.com.doistech.apicondomanagersaas.domain.chat.ConversaTipo;
 import org.springframework.data.jpa.repository.JpaRepository;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -19,4 +20,13 @@ public interface ConversaRepository extends JpaRepository<Conversa, Long> {
     List<Conversa> findAllByCondominioIdAndStatusOrderByUltimaMensagemAtDesc(Long condominioId, ConversaStatus status);
 
     List<Conversa> findAllByCondominioIdAndTipoAndStatusOrderByUltimaMensagemAtDesc(Long condominioId, ConversaTipo tipo, ConversaStatus status);
+
+    Optional<Conversa> findFirstByCondominioIdAndTipoAndMoradorVinculoIdAndStatusAndCreatedAtBetweenOrderByCreatedAtDesc(
+            Long condominioId,
+            ConversaTipo tipo,
+            Long moradorVinculoId,
+            ConversaStatus status,
+            LocalDateTime inicio,
+            LocalDateTime fim
+    );
 }

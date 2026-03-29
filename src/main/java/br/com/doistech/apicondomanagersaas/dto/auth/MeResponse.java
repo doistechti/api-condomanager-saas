@@ -7,5 +7,6 @@ public record MeResponse(
         String nome,
         String email,
         Long condominioId,
-        List<String> roles
+        List<String> roles,
+        boolean primeiroAcesso
 ) {}

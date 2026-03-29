@@ -33,6 +33,12 @@ public class ChatController {
         return service.createConversa(condominioId, req);
     }
 
+    @PostMapping("/conversas/suporte-condominio/ativa")
+    @ResponseStatus(HttpStatus.CREATED)
+    public ConversaResponse getOrCreateActiveSupportConversation(@PathVariable Long condominioId) {
+        return service.getOrCreateActiveSupportConversation(condominioId);
+    }
+
     @PatchMapping("/conversas/{id}/fechar")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void fechar(@PathVariable Long condominioId, @PathVariable Long id) {

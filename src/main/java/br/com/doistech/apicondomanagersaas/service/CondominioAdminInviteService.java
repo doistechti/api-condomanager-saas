@@ -143,7 +143,8 @@ public class CondominioAdminInviteService {
                         usuario.getNome(),
                         usuario.getEmail(),
                         usuario.getCondominioId(),
-                        roles
+                        roles,
+                        false
                 )
         );
     }

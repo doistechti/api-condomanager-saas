@@ -10,6 +10,7 @@ import br.com.doistech.apicondomanagersaas.domain.usuario.Usuario;
 import br.com.doistech.apicondomanagersaas.dto.auth.LoginRequest;
 import br.com.doistech.apicondomanagersaas.dto.auth.LoginResponse;
 import br.com.doistech.apicondomanagersaas.dto.auth.MeResponse;
+import br.com.doistech.apicondomanagersaas.dto.auth.FirstAccessPasswordRequest;
 import br.com.doistech.apicondomanagersaas.dto.auth.MoradorInviteAcceptRequest;
 import br.com.doistech.apicondomanagersaas.dto.auth.MoradorInviteResponse;
 import br.com.doistech.apicondomanagersaas.dto.auth.ForgotPasswordRequest;
@@ -78,16 +79,7 @@ public class AuthService {
         String displayName = resolveDisplayName(usuario, roles);
         String token = jwtUtil.generateToken(usuario.getEmail(), usuario.getId(), usuario.getCondominioId(), roles);
 
-        return new LoginResponse(
-                token,
-                new LoginResponse.UsuarioMeResponse(
-                        usuario.getId(),
-                        displayName,
-                        usuario.getEmail(),
-                        usuario.getCondominioId(),
-                        roles
-                )
-        );
+        return buildLoginResponse(usuario, displayName, roles, token);
     }
 
     public MeResponse me(String email) {
@@ -96,7 +88,14 @@ public class AuthService {
 
         List<String> roles = usuario.getRoles().stream().map(Role::getNome).toList();
         String displayName = resolveDisplayName(usuario, roles);
-        return new MeResponse(usuario.getId(), displayName, usuario.getEmail(), usuario.getCondominioId(), roles);
+        return new MeResponse(
+                usuario.getId(),
+                displayName,
+                usuario.getEmail(),
+                usuario.getCondominioId(),
+                roles,
+                Boolean.TRUE.equals(usuario.getPrimeiroAcesso())
+        );
     }
 
     @Transactional
@@ -140,6 +139,28 @@ public class AuthService {
         usuarioRepository.save(usuario);
     }
 
+    @Transactional
+    public void completeFirstAccess(String email, FirstAccessPasswordRequest request) {
+        Usuario usuario = usuarioRepository.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("Usuario nao encontrado"));
+
+        if (!Boolean.TRUE.equals(usuario.getPrimeiroAcesso())) {
+            throw new BadRequestException("Este usuario ja concluiu o primeiro acesso.");
+        }
+
+        usuario.setSenha(passwordEncoder.encode(request.senha()));
+        usuario.setPrimeiroAcesso(false);
+        usuarioRepository.save(usuario);
+
+        pessoaUnidadeRepository.findAllByUsuarioIdAndEhMoradorTrueAndAtivoTrue(usuario.getId()).stream()
+                .findFirst()
+                .ifPresent(vinculo -> {
+                    vinculo.setConviteAceitoEm(LocalDateTime.now());
+                    vinculo.setUpdatedAt(LocalDateTime.now());
+                    pessoaUnidadeRepository.save(vinculo);
+                });
+    }
+
     @Transactional(readOnly = true)
     public MoradorInviteResponse getMoradorInvite(String token) {
         PessoaUnidade vinculo = getValidInvite(token);
@@ -179,6 +200,7 @@ public class AuthService {
                 .email(email)
                 .senha(passwordEncoder.encode(request.senha()))
                 .ativo(true)
+                .primeiroAcesso(false)
                 .condominioId(vinculo.getCondominio().getId())
                 .roles(Set.of(roleMorador))
                 .build();
@@ -194,14 +216,19 @@ public class AuthService {
         String displayName = resolveDisplayName(usuario, roles);
         String jwt = jwtUtil.generateToken(usuario.getEmail(), usuario.getId(), usuario.getCondominioId(), roles);
 
+        return buildLoginResponse(usuario, displayName, roles, jwt);
+    }
+
+    private LoginResponse buildLoginResponse(Usuario usuario, String displayName, List<String> roles, String token) {
         return new LoginResponse(
-                jwt,
+                token,
                 new LoginResponse.UsuarioMeResponse(
                         usuario.getId(),
                         displayName,
                         usuario.getEmail(),
                         usuario.getCondominioId(),
-                        roles
+                        roles,
+                        Boolean.TRUE.equals(usuario.getPrimeiroAcesso())
                 )
         );
     }

@@ -5,14 +5,19 @@ import br.com.doistech.apicondomanagersaas.common.exception.NotFoundException;
 import br.com.doistech.apicondomanagersaas.domain.condominio.Condominio;
 import br.com.doistech.apicondomanagersaas.domain.pessoa.Pessoa;
 import br.com.doistech.apicondomanagersaas.domain.pessoaUnidade.PessoaUnidade;
+import br.com.doistech.apicondomanagersaas.domain.role.Role;
+import br.com.doistech.apicondomanagersaas.domain.usuario.Usuario;
 import br.com.doistech.apicondomanagersaas.dto.pessoaunidade.PessoaUnidadeCreateRequest;
 import br.com.doistech.apicondomanagersaas.dto.pessoaunidade.PessoaUnidadeResponse;
 import br.com.doistech.apicondomanagersaas.dto.pessoaunidade.PessoaUnidadeUpdateRequest;
 import br.com.doistech.apicondomanagersaas.mapper.PessoaUnidadeMapper;
 import br.com.doistech.apicondomanagersaas.repository.PessoaRepository;
 import br.com.doistech.apicondomanagersaas.repository.PessoaUnidadeRepository;
+import br.com.doistech.apicondomanagersaas.repository.RoleRepository;
 import br.com.doistech.apicondomanagersaas.repository.UnidadeRepository;
+import br.com.doistech.apicondomanagersaas.repository.UsuarioRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -20,11 +25,16 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
-import java.util.UUID;
+import java.util.Set;
+import java.util.concurrent.ThreadLocalRandom;
 
 @Service
 @RequiredArgsConstructor
 public class PessoaUnidadeService {
+
+    private static final List<String> TEMP_PASSWORD_WORDS = List.of(
+            "rosa", "casa", "vida", "lago", "sola", "ninho", "folha", "porto", "piso", "vento"
+    );
 
     private final PessoaUnidadeRepository repository;
     private final PessoaRepository pessoaRepository;
@@ -32,6 +42,9 @@ public class PessoaUnidadeService {
     private final UnidadeRepository unidadeRepository;
     private final PessoaUnidadeMapper mapper;
     private final MoradorInviteEmailService moradorInviteEmailService;
+    private final UsuarioRepository usuarioRepository;
+    private final RoleRepository roleRepository;
+    private final PasswordEncoder passwordEncoder;
 
     public PessoaUnidadeResponse create(PessoaUnidadeCreateRequest req) {
         Condominio condominio = condominioService.getEntity(req.condominioId());
@@ -159,20 +172,29 @@ public class PessoaUnidadeService {
             throw new BadRequestException("Convite so pode ser enviado para moradores.");
         }
 
-        if (pu.getUsuario() != null) {
-            throw new BadRequestException("Este morador ja possui uma conta ativa.");
-        }
-
         if (pu.getPessoa() == null || pu.getPessoa().getEmail() == null || pu.getPessoa().getEmail().isBlank()) {
             throw new BadRequestException("Morador nao possui e-mail cadastrado.");
         }
 
-        pu.setConviteToken(UUID.randomUUID().toString());
+        Usuario usuario = resolveUsuarioParaPrimeiroAcesso(pu);
+        String senhaTemporaria = generateTemporaryPassword();
+
+        usuario.setNome(pu.getPessoa().getNome());
+        usuario.setEmail(pu.getPessoa().getEmail().trim().toLowerCase());
+        usuario.setSenha(passwordEncoder.encode(senhaTemporaria));
+        usuario.setAtivo(true);
+        usuario.setPrimeiroAcesso(true);
+        usuario.setCondominioId(pu.getCondominio().getId());
+        usuario.setRoles(resolveMoradorRole());
+        usuario = usuarioRepository.save(usuario);
+
+        pu.setUsuario(usuario);
+        pu.setConviteToken(null);
         pu.setConviteEnviadoEm(LocalDateTime.now());
         pu.setConviteAceitoEm(null);
         pu.setUpdatedAt(LocalDateTime.now());
         repository.save(pu);
-        moradorInviteEmailService.sendInvite(pu);
+        moradorInviteEmailService.sendInvite(pu, senhaTemporaria);
 
         return mapper.toResponse(pu);
     }
@@ -262,5 +284,37 @@ public class PessoaUnidadeService {
 
         String digits = cpfCnpj.replaceAll("\\D", "");
         return digits.isBlank() ? null : digits;
+    }
+
+    private Usuario resolveUsuarioParaPrimeiroAcesso(PessoaUnidade pu) {
+        if (pu.getUsuario() != null) {
+            if (!Boolean.TRUE.equals(pu.getUsuario().getPrimeiroAcesso())) {
+                throw new BadRequestException("Este morador ja possui uma conta ativa.");
+            }
+            return pu.getUsuario();
+        }
+
+        String email = pu.getPessoa().getEmail().trim().toLowerCase();
+        Usuario usuarioExistente = usuarioRepository.findByEmail(email).orElse(null);
+        if (usuarioExistente != null) {
+            if (!Boolean.TRUE.equals(usuarioExistente.getPrimeiroAcesso())) {
+                throw new BadRequestException("Ja existe um usuario cadastrado com este e-mail.");
+            }
+            return usuarioExistente;
+        }
+
+        return Usuario.builder().build();
+    }
+
+    private Set<Role> resolveMoradorRole() {
+        Role roleMorador = roleRepository.findByNome("MORADOR")
+                .orElseThrow(() -> new IllegalStateException("Role MORADOR nao encontrada. Rode o bootstrap de roles."));
+        return Set.of(roleMorador);
+    }
+
+    private String generateTemporaryPassword() {
+        String word = TEMP_PASSWORD_WORDS.get(ThreadLocalRandom.current().nextInt(TEMP_PASSWORD_WORDS.size()));
+        int number = ThreadLocalRandom.current().nextInt(1000, 10000);
+        return word.substring(0, Math.min(4, word.length())) + number;
     }
 }

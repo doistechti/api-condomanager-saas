@@ -30,8 +30,13 @@ public class Usuario {
     @Column(nullable = false, length = 255)
     private String senha;
 
+    @Builder.Default
     @Column(nullable = false)
     private Boolean ativo = true;
+
+    @Builder.Default
+    @Column(name = "primeiro_acesso", nullable = false)
+    private Boolean primeiroAcesso = false;
 
     @Column(name = "condominio_id")
     private Long condominioId;
@@ -48,5 +53,6 @@ public class Usuario {
             joinColumns = @JoinColumn(name = "usuario_id"),
             inverseJoinColumns = @JoinColumn(name = "role_id")
     )
+    @Builder.Default
     private Set<Role> roles = new HashSet<>();
 }

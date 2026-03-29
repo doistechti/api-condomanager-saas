@@ -1,6 +1,7 @@
 package br.com.doistech.apicondomanagersaas.controller;
 
 import br.com.doistech.apicondomanagersaas.dto.auth.ForgotPasswordRequest;
+import br.com.doistech.apicondomanagersaas.dto.auth.FirstAccessPasswordRequest;
 import br.com.doistech.apicondomanagersaas.dto.auth.LoginRequest;
 import br.com.doistech.apicondomanagersaas.dto.auth.LoginResponse;
 import br.com.doistech.apicondomanagersaas.dto.auth.MeResponse;
@@ -35,6 +36,15 @@ public class AuthController {
     @PostMapping("/reset-password")
     public ResponseEntity<Void> resetPassword(@Valid @RequestBody ResetPasswordRequest request) {
         authService.resetPassword(request);
+        return ResponseEntity.noContent().build();
+    }
+
+    @PostMapping("/first-access")
+    public ResponseEntity<Void> completeFirstAccess(
+            Authentication authentication,
+            @Valid @RequestBody FirstAccessPasswordRequest request
+    ) {
+        authService.completeFirstAccess(authentication.getName(), request);
         return ResponseEntity.noContent().build();
     }
 

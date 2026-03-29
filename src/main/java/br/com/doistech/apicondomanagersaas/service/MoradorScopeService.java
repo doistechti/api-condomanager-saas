@@ -32,6 +32,45 @@ public class MoradorScopeService {
 
     @Transactional
     public MoradorScopeResponse getScope(String email) {
+        PessoaUnidade principal = getPrincipalPessoaUnidade(email);
+        var usuario = usuarioRepository.findByEmail(email)
+                .orElseThrow(() -> new NotFoundException("Usuario nao encontrado"));
+
+        List<PessoaUnidade> vinculos = pessoaUnidadeRepository
+                .findAllByUsuarioIdAndEhMoradorTrueAndAtivoTrue(usuario.getId());
+
+        var condominio = condominioService.getEntity(usuario.getCondominioId());
+        Long vinculoPrincipalId = principal.getId();
+        try {
+            vinculoPrincipalId = resolveVinculoOperacional(principal).getId();
+        } catch (RuntimeException ex) {
+            log.warn(
+                    "Falha ao resolver vinculo operacional do morador. usuarioId={}, pessoaUnidadeId={}, condominioId={}",
+                    usuario.getId(),
+                    principal.getId(),
+                    usuario.getCondominioId(),
+                    ex
+            );
+        }
+
+        List<Long> unidadeIds = vinculos.stream()
+                .map(v -> v.getUnidade().getId())
+                .distinct()
+                .sorted()
+                .toList();
+
+        return new MoradorScopeResponse(
+                usuario.getId(),
+                usuario.getCondominioId(),
+                condominio.getNome(),
+                principal.getPessoa().getId(),
+                vinculoPrincipalId,
+                unidadeIds
+        );
+    }
+
+    @Transactional
+    public PessoaUnidade getPrincipalPessoaUnidade(String email) {
         var usuario = usuarioRepository.findByEmail(email)
                 .orElseThrow(() -> new NotFoundException("Usuario nao encontrado"));
 
@@ -63,34 +102,7 @@ public class MoradorScopeService {
                 vinculos.stream().min(Comparator.comparing(PessoaUnidade::getId)).orElseThrow()
         );
 
-        List<Long> unidadeIds = vinculos.stream()
-                .map(v -> v.getUnidade().getId())
-                .distinct()
-                .sorted()
-                .toList();
-
-        var condominio = condominioService.getEntity(usuario.getCondominioId());
-        Long vinculoPrincipalId = principal.getId();
-        try {
-            vinculoPrincipalId = resolveVinculoOperacional(principal).getId();
-        } catch (RuntimeException ex) {
-            log.warn(
-                    "Falha ao resolver vinculo operacional do morador. usuarioId={}, pessoaUnidadeId={}, condominioId={}",
-                    usuario.getId(),
-                    principal.getId(),
-                    usuario.getCondominioId(),
-                    ex
-            );
-        }
-
-        return new MoradorScopeResponse(
-                usuario.getId(),
-                usuario.getCondominioId(),
-                condominio.getNome(),
-                principal.getPessoa().getId(),
-                vinculoPrincipalId,
-                unidadeIds
-        );
+        return principal;
     }
 
     private VinculoUnidade resolveVinculoOperacional(PessoaUnidade principal) {

@@ -23,28 +23,27 @@ public class MoradorInviteEmailService {
     private final JavaMailSender mailSender;
     private final String fromAddress;
     private final String frontendBaseUrl;
-    private final String moradorInvitePath;
+    private final String mobileAppUrl;
 
     public MoradorInviteEmailService(
             ObjectProvider<JavaMailSender> mailSenderProvider,
             @Value("${app.mail.from:no-reply@condomanager.local}") String fromAddress,
             @Value("${app.frontend.base-url:http://localhost:3000}") String frontendBaseUrl,
-            @Value("${app.frontend.morador-convite-path:/convite/morador}") String moradorInvitePath
+            @Value("${app.frontend.mobile-url:https://condoapp.doistech.com.br}") String mobileAppUrl
     ) {
         this.mailSender = mailSenderProvider.getIfAvailable();
         this.fromAddress = fromAddress;
         this.frontendBaseUrl = frontendBaseUrl;
-        this.moradorInvitePath = moradorInvitePath;
+        this.mobileAppUrl = mobileAppUrl;
     }
 
-    public void sendInvite(PessoaUnidade pessoaUnidade) {
+    public void sendInvite(PessoaUnidade pessoaUnidade, String senhaTemporaria) {
         if (mailSender == null) {
             throw new BadRequestException("Servico de e-mail nao configurado. Defina as propriedades SMTP para enviar convites.");
         }
 
         String email = pessoaUnidade.getPessoa().getEmail();
         String subject = buildSubject(pessoaUnidade);
-        String inviteUrl = buildInviteUrl(pessoaUnidade.getConviteToken());
 
         try {
             var message = mailSender.createMimeMessage();
@@ -52,7 +51,7 @@ public class MoradorInviteEmailService {
             helper.setFrom(fromAddress);
             helper.setTo(email);
             helper.setSubject(subject);
-            helper.setText(buildHtmlBody(pessoaUnidade, inviteUrl), true);
+            helper.setText(buildHtmlBody(pessoaUnidade, senhaTemporaria), true);
             mailSender.send(message);
         } catch (MailAuthenticationException ex) {
             throw new BadRequestException("Falha ao autenticar no servidor SMTP. Verifique as credenciais de e-mail.");
@@ -63,24 +62,21 @@ public class MoradorInviteEmailService {
         }
     }
 
-    private String buildInviteUrl(String token) {
-        String baseUrl = frontendBaseUrl.endsWith("/") ? frontendBaseUrl.substring(0, frontendBaseUrl.length() - 1) : frontendBaseUrl;
-        String path = moradorInvitePath.startsWith("/") ? moradorInvitePath : "/" + moradorInvitePath;
-        return baseUrl + path + "?token=" + token;
-    }
-
     private String buildSubject(PessoaUnidade pessoaUnidade) {
         String nomeCondominio = pessoaUnidade.getCondominio() != null ? pessoaUnidade.getCondominio().getNome() : "";
-        return nomeCondominio + " - Ative seu acesso ao Sistema do Condominio.";
+        return nomeCondominio + " - Seu primeiro acesso ao Condomínio Tech.";
     }
 
-    private String buildHtmlBody(PessoaUnidade pessoaUnidade, String inviteUrl) {
+    private String buildHtmlBody(PessoaUnidade pessoaUnidade, String senhaTemporaria) {
         String template = loadTemplate();
         return template
                 .replace("${nomeMorador}", escapeHtml(pessoaUnidade.getPessoa().getNome()))
                 .replace("${nomeCondominio}", escapeHtml(pessoaUnidade.getCondominio().getNome()))
+                .replace("${emailMorador}", escapeHtml(pessoaUnidade.getPessoa().getEmail()))
                 .replace("${numeroUnidade}", escapeHtml(pessoaUnidade.getUnidade().getIdentificacao()))
-                .replace("${linkConvite}", escapeHtml(inviteUrl));
+                .replace("${senhaTemporaria}", escapeHtml(senhaTemporaria))
+                .replace("${portalWebUrl}", escapeHtml(normalizeUrl(frontendBaseUrl)))
+                .replace("${appUrl}", escapeHtml(normalizeUrl(mobileAppUrl)));
     }
 
     private String loadTemplate() {
@@ -94,5 +90,12 @@ public class MoradorInviteEmailService {
 
     private String escapeHtml(String value) {
         return HtmlUtils.htmlEscape(value == null ? "" : value, StandardCharsets.UTF_8.name());
+    }
+
+    private String normalizeUrl(String value) {
+        if (value == null) {
+            return "";
+        }
+        return value.endsWith("/") ? value.substring(0, value.length() - 1) : value;
     }
 }

@@ -4,6 +4,7 @@ import br.com.doistech.apicondomanagersaas.common.exception.ForbiddenException;
 import br.com.doistech.apicondomanagersaas.common.exception.NotFoundException;
 import br.com.doistech.apicondomanagersaas.config.JwtUtil;
 import br.com.doistech.apicondomanagersaas.domain.chat.*;
+import br.com.doistech.apicondomanagersaas.domain.pessoaUnidade.PessoaUnidade;
 import br.com.doistech.apicondomanagersaas.domain.usuario.Usuario;
 import br.com.doistech.apicondomanagersaas.dto.chat.*;
 import br.com.doistech.apicondomanagersaas.repository.*;
@@ -14,6 +15,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -26,6 +28,7 @@ public class ChatService {
     private final CondominioService condominioService;
     private final PessoaUnidadeRepository pessoaUnidadeRepository;
     private final UsuarioRepository usuarioRepository;
+    private final MoradorScopeService moradorScopeService;
     private final JwtUtil jwtUtil;
     private final HttpServletRequest request;
 
@@ -53,6 +56,14 @@ public class ChatService {
         return RemetenteTipo.morador;
     }
 
+    private String currentUserEmail() {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth == null || auth.getName() == null || auth.getName().isBlank()) {
+            throw new ForbiddenException("Usuário autenticado não identificado");
+        }
+        return auth.getName();
+    }
+
     private void assertCanAccessConversa(Long condominioId, Conversa conversa) {
         // tenant já é validado pelo TenantIsolationFilter, mas aqui garantimos conversa pertence ao condominioId
         if (!conversa.getCondominio().getId().equals(condominioId)) {
@@ -69,6 +80,39 @@ public class ChatService {
                 throw new ForbiddenException("Acesso negado");
             }
         }
+    }
+
+    private PessoaUnidade resolveCurrentMoradorVinculo() {
+        return moradorScopeService.getPrincipalPessoaUnidade(currentUserEmail());
+    }
+
+    private ConversaResponse mapConversaResponse(Conversa conversa, Long uid) {
+        long unread = mensagemRepository.countByConversaIdAndLidaFalseAndRemetenteIdNot(conversa.getId(), uid);
+
+        String condNome = null;
+        try { condNome = conversa.getCondominio().getNome(); } catch (Exception ignored) {}
+
+        String moradorNome = null;
+        Long moradorId = null;
+        if (conversa.getMoradorVinculo() != null) {
+            moradorId = conversa.getMoradorVinculo().getId();
+            try { moradorNome = conversa.getMoradorVinculo().getPessoa().getNome(); } catch (Exception ignored) {}
+        }
+
+        return new ConversaResponse(
+                conversa.getId(),
+                conversa.getTipo(),
+                conversa.getCondominio().getId(),
+                moradorId,
+                conversa.getTitulo(),
+                conversa.getStatus(),
+                conversa.getCreatedAt(),
+                conversa.getUpdatedAt(),
+                conversa.getUltimaMensagemAt(),
+                condNome,
+                moradorNome,
+                unread
+        );
     }
 
     // ===== Conversas =====
@@ -91,34 +135,7 @@ public class ChatService {
                     .toList();
         }
 
-        return conversas.stream().map(c -> {
-            long unread = mensagemRepository.countByConversaIdAndLidaFalseAndRemetenteIdNot(c.getId(), uid);
-
-            String condNome = null;
-            try { condNome = c.getCondominio().getNome(); } catch (Exception ignored) {}
-
-            String moradorNome = null;
-            Long moradorId = null;
-            if (c.getMoradorVinculo() != null) {
-                moradorId = c.getMoradorVinculo().getId();
-                try { moradorNome = c.getMoradorVinculo().getPessoa().getNome(); } catch (Exception ignored) {}
-            }
-
-            return new ConversaResponse(
-                    c.getId(),
-                    c.getTipo(),
-                    c.getCondominio().getId(),
-                    moradorId,
-                    c.getTitulo(),
-                    c.getStatus(),
-                    c.getCreatedAt(),
-                    c.getUpdatedAt(),
-                    c.getUltimaMensagemAt(),
-                    condNome,
-                    moradorNome,
-                    unread
-            );
-        }).toList();
+        return conversas.stream().map(c -> mapConversaResponse(c, uid)).toList();
     }
 
     public ConversaResponse createConversa(Long condominioId, ConversaCreateRequest req) {
@@ -129,9 +146,7 @@ public class ChatService {
         Long moradorVinculoId = req.moradorId();
 
         if (hasAuthority("ROLE_MORADOR")) {
-            var vinculos = pessoaUnidadeRepository.findAllByUsuarioIdAndEhMoradorTrueAndAtivoTrue(uid);
-            if (vinculos.isEmpty()) throw new ForbiddenException("Usuário morador sem vínculo ativo");
-            moradorVinculoId = vinculos.get(0).getId();
+            moradorVinculoId = resolveCurrentMoradorVinculo().getId();
         }
 
         var condominio = condominioService.getEntity(condominioId);
@@ -154,22 +169,45 @@ public class ChatService {
 
         var saved = conversaRepository.save(conversa);
 
-        // Response
-        String moradorNome = saved.getMoradorVinculo() != null ? saved.getMoradorVinculo().getPessoa().getNome() : null;
-        return new ConversaResponse(
-                saved.getId(),
-                saved.getTipo(),
-                condominioId,
-                saved.getMoradorVinculo() != null ? saved.getMoradorVinculo().getId() : null,
-                saved.getTitulo(),
-                saved.getStatus(),
-                saved.getCreatedAt(),
-                saved.getUpdatedAt(),
-                saved.getUltimaMensagemAt(),
-                condominio.getNome(),
-                moradorNome,
-                0
-        );
+        return mapConversaResponse(saved, uid);
+    }
+
+    @Transactional
+    public ConversaResponse getOrCreateActiveSupportConversation(Long condominioId) {
+        if (!hasAuthority("ROLE_MORADOR")) {
+            throw new ForbiddenException("Apenas moradores podem abrir a conversa ativa do suporte.");
+        }
+
+        Long uid = currentUid();
+        PessoaUnidade moradorVinculo = resolveCurrentMoradorVinculo();
+        LocalDateTime inicioDia = LocalDate.now().atStartOfDay();
+        LocalDateTime fimDia = inicioDia.plusDays(1);
+
+        Conversa conversa = conversaRepository
+                .findFirstByCondominioIdAndTipoAndMoradorVinculoIdAndStatusAndCreatedAtBetweenOrderByCreatedAtDesc(
+                        condominioId,
+                        ConversaTipo.suporte_condominio,
+                        moradorVinculo.getId(),
+                        ConversaStatus.aberta,
+                        inicioDia,
+                        fimDia
+                )
+                .orElseGet(() -> {
+                    var condominio = condominioService.getEntity(condominioId);
+                    var novaConversa = Conversa.builder()
+                            .condominio(condominio)
+                            .moradorVinculo(moradorVinculo)
+                            .tipo(ConversaTipo.suporte_condominio)
+                            .status(ConversaStatus.aberta)
+                            .titulo(null)
+                            .createdAt(LocalDateTime.now())
+                            .updatedAt(LocalDateTime.now())
+                            .ultimaMensagemAt(LocalDateTime.now())
+                            .build();
+                    return conversaRepository.save(novaConversa);
+                });
+
+        return mapConversaResponse(conversa, uid);
     }
 
     @Transactional
