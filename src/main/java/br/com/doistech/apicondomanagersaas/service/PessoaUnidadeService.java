@@ -184,6 +184,7 @@ public class PessoaUnidadeService {
         usuario.setSenha(passwordEncoder.encode(senhaTemporaria));
         usuario.setAtivo(true);
         usuario.setPrimeiroAcesso(true);
+        usuario.setPrimeiroAcessoConcluidoEm(null);
         usuario.setCondominioId(pu.getCondominio().getId());
         usuario.setRoles(resolveMoradorRole());
         usuario = usuarioRepository.save(usuario);

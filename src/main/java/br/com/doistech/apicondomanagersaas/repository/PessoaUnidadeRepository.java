@@ -12,6 +12,8 @@ public interface PessoaUnidadeRepository extends JpaRepository<PessoaUnidade, Lo
 
     List<PessoaUnidade> findAllByCondominioIdAndUnidadeIdAndAtivoTrue(Long condominioId, Long unidadeId);
 
+    List<PessoaUnidade> findAllByCondominioIdAndUnidadeIdInAndAtivoTrue(Long condominioId, List<Long> unidadeIds);
+
     // ✅ novos (fachadas)
     List<PessoaUnidade> findAllByCondominioIdAndEhMoradorTrueAndAtivoTrue(Long condominioId);
 

@@ -24,6 +24,11 @@ public class MoradorVeiculoController {
         return service.listar(auth.getName());
     }
 
+    @GetMapping("/unidade")
+    public List<VeiculoResponse> listByUnit(Authentication auth) {
+        return service.listarDaUnidade(auth.getName());
+    }
+
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     public VeiculoResponse create(Authentication auth, @Valid @RequestBody MoradorVeiculoCreateRequest req) {

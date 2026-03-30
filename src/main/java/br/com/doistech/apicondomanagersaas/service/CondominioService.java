@@ -214,10 +214,15 @@ public class CondominioService {
                 .map(Assinatura::getStatus)
                 .orElse(null);
 
-        Long adminUserId = usuarioRepository.findFirstAdminCondominioUserIdByCondominioId(entity.getId())
+        var adminAccess = usuarioRepository.findFirstAdminCondominioAccessByCondominioId(entity.getId())
                 .orElse(null);
+        Long adminUserId = adminAccess != null ? adminAccess.getId() : null;
+        LocalDateTime adminPrimeiroAcessoConcluidoEm = adminAccess != null
+                ? adminAccess.getPrimeiroAcessoConcluidoEm()
+                : null;
 
         var conviteAdminEnviadoEm = adminUserId != null
+                && adminPrimeiroAcessoConcluidoEm != null
                 ? null
                 : condominioAdminInviteRepository
                 .findTopByCondominioIdAndAtivoTrueAndAceitoEmIsNullAndExpiraEmAfterOrderByCreatedAtDesc(
@@ -242,6 +247,7 @@ public class CondominioService {
                 unidadesCount,
                 assinaturaStatus,
                 adminUserId,
+                adminPrimeiroAcessoConcluidoEm,
                 conviteAdminEnviadoEm
         );
     }

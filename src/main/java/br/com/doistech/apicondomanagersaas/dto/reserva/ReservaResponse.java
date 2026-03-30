@@ -10,6 +10,7 @@ public record ReservaResponse(
         Long condominioId,
         Long espacoId,
         Long vinculoId,
+        Long unidadeId,
         LocalDate dataReserva,
         LocalTime horaInicio,
         LocalTime horaFim,

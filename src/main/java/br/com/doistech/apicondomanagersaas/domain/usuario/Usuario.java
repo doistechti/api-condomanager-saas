@@ -38,6 +38,9 @@ public class Usuario {
     @Column(name = "primeiro_acesso", nullable = false)
     private Boolean primeiroAcesso = false;
 
+    @Column(name = "primeiro_acesso_concluido_em")
+    private LocalDateTime primeiroAcessoConcluidoEm;
+
     @Column(name = "condominio_id")
     private Long condominioId;
 

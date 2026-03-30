@@ -121,6 +121,8 @@ public class CondominioAdminInviteService {
                 .email(email)
                 .senha(passwordEncoder.encode(request.senha()))
                 .ativo(true)
+                .primeiroAcesso(false)
+                .primeiroAcessoConcluidoEm(LocalDateTime.now())
                 .condominioId(invite.getCondominio().getId())
                 .roles(Set.of(role))
                 .build();

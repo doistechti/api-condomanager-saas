@@ -9,6 +9,7 @@ import java.util.Optional;
 public interface VeiculoRepository extends JpaRepository<Veiculo, Long> {
     List<Veiculo> findAllByCondominioId(Long condominioId);
     List<Veiculo> findAllByPessoaIdAndCondominioId(Long pessoaId, Long condominioId);
+    List<Veiculo> findAllByCondominioIdAndPessoaIdIn(Long condominioId, List<Long> pessoaIds);
     Optional<Veiculo> findByIdAndCondominioId(Long id, Long condominioId);
 
     long countByCondominioId(Long condominioId);

@@ -75,6 +75,11 @@ public class AuthService {
             throw new RuntimeException("Credenciais invalidas");
         }
 
+        if (!Boolean.TRUE.equals(usuario.getPrimeiroAcesso()) && usuario.getPrimeiroAcessoConcluidoEm() == null) {
+            usuario.setPrimeiroAcessoConcluidoEm(LocalDateTime.now());
+            usuarioRepository.save(usuario);
+        }
+
         List<String> roles = usuario.getRoles().stream().map(Role::getNome).toList();
         String displayName = resolveDisplayName(usuario, roles);
         String token = jwtUtil.generateToken(usuario.getEmail(), usuario.getId(), usuario.getCondominioId(), roles);
@@ -150,6 +155,7 @@ public class AuthService {
 
         usuario.setSenha(passwordEncoder.encode(request.senha()));
         usuario.setPrimeiroAcesso(false);
+        usuario.setPrimeiroAcessoConcluidoEm(LocalDateTime.now());
         usuarioRepository.save(usuario);
 
         pessoaUnidadeRepository.findAllByUsuarioIdAndEhMoradorTrueAndAtivoTrue(usuario.getId()).stream()
@@ -201,6 +207,7 @@ public class AuthService {
                 .senha(passwordEncoder.encode(request.senha()))
                 .ativo(true)
                 .primeiroAcesso(false)
+                .primeiroAcessoConcluidoEm(LocalDateTime.now())
                 .condominioId(vinculo.getCondominio().getId())
                 .roles(Set.of(roleMorador))
                 .build();

@@ -8,13 +8,16 @@ import br.com.doistech.apicondomanagersaas.dto.veiculo.VeiculoResponse;
 import br.com.doistech.apicondomanagersaas.dto.veiculo.VeiculoUpdateRequest;
 import br.com.doistech.apicondomanagersaas.mapper.VeiculoMapper;
 import br.com.doistech.apicondomanagersaas.repository.CondominioRepository;
+import br.com.doistech.apicondomanagersaas.repository.PessoaUnidadeRepository;
 import br.com.doistech.apicondomanagersaas.repository.PessoaRepository;
 import br.com.doistech.apicondomanagersaas.repository.VeiculoRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -22,6 +25,7 @@ public class MoradorVeiculoService {
 
     private final MoradorScopeService moradorScopeService;
     private final VeiculoRepository veiculoRepository;
+    private final PessoaUnidadeRepository pessoaUnidadeRepository;
     private final CondominioRepository condominioRepository;
     private final PessoaRepository pessoaRepository;
     private final VeiculoMapper veiculoMapper;
@@ -35,6 +39,39 @@ public class MoradorVeiculoService {
     public List<VeiculoResponse> listar(String email) {
         var scope = moradorScopeService.getScope(email);
         return veiculoRepository.findAllByPessoaIdAndCondominioId(scope.pessoaId(), scope.condominioId())
+                .stream()
+                .map(veiculoMapper::toResponse)
+                .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public List<VeiculoResponse> listarDaUnidade(String email) {
+        var scope = moradorScopeService.getScope(email);
+
+        if (scope.unidadeIds() == null || scope.unidadeIds().isEmpty()) {
+            return List.of();
+        }
+
+        var pessoaIds = pessoaUnidadeRepository
+                .findAllByCondominioIdAndUnidadeIdInAndAtivoTrue(scope.condominioId(), scope.unidadeIds())
+                .stream()
+                .map(vinculo -> vinculo.getPessoa().getId())
+                .distinct()
+                .toList();
+
+        if (pessoaIds.isEmpty()) {
+            return List.of();
+        }
+
+        return veiculoRepository.findAllByCondominioIdAndPessoaIdIn(scope.condominioId(), pessoaIds)
+                .stream()
+                .collect(Collectors.toMap(
+                        Veiculo::getId,
+                        veiculo -> veiculo,
+                        (current, ignored) -> current,
+                        LinkedHashMap::new
+                ))
+                .values()
                 .stream()
                 .map(veiculoMapper::toResponse)
                 .toList();

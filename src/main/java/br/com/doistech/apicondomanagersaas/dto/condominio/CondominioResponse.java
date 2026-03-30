@@ -19,6 +19,7 @@ public record CondominioResponse(
         Long unidadesCount,
         AssinaturaStatus assinaturaStatus,
         Long adminUserId,
+        LocalDateTime adminPrimeiroAcessoConcluidoEm,
         LocalDateTime conviteAdminEnviadoEm
 ) {
 }

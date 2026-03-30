@@ -12,5 +12,6 @@ public interface ReservaMapper {
     @Mapping(target = "condominioId", source = "condominio.id")
     @Mapping(target = "espacoId", source = "espaco.id")
     @Mapping(target = "vinculoId", source = "vinculo.id")
+    @Mapping(target = "unidadeId", source = "vinculo.unidade.id")
     ReservaResponse toResponse(Reserva entity);
 }
