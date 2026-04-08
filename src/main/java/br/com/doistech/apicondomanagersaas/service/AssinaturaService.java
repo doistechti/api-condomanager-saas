@@ -23,6 +23,7 @@ public class AssinaturaService {
     private final AssinaturaRepository assinaturaRepository;
     private final CondominioRepository condominioRepository;
     private final PlanoRepository planoRepository;
+    private final AssinaturaEmailService assinaturaEmailService;
 
     @Transactional(readOnly = true)
     public List<AssinaturaResponse> listar() {
@@ -67,6 +68,7 @@ public class AssinaturaService {
                 .build();
 
         assinaturaRepository.save(assinatura);
+        assinaturaEmailService.sendCreatedNotification(assinatura);
         return toResponse(assinatura);
     }
 
@@ -74,6 +76,8 @@ public class AssinaturaService {
     public AssinaturaResponse atualizar(Long id, AssinaturaUpdateRequest req) {
         var assinatura = assinaturaRepository.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException("Assinatura não encontrada: " + id));
+        var planoAnteriorId = assinatura.getPlano().getId();
+        var statusAnterior = assinatura.getStatus();
 
         if (req.planoId() != null) {
             var plano = planoRepository.findById(req.planoId())
@@ -102,6 +106,13 @@ public class AssinaturaService {
 
         if (req.mercadoPagoId() != null) {
             assinatura.setMercadoPagoId(req.mercadoPagoId());
+        }
+
+        if (!assinatura.getPlano().getId().equals(planoAnteriorId)) {
+            assinaturaEmailService.sendPlanChangedNotification(assinatura);
+        }
+        if (assinatura.getStatus() != statusAnterior) {
+            assinaturaEmailService.sendStatusChangedNotification(assinatura);
         }
 
         return toResponse(assinatura);

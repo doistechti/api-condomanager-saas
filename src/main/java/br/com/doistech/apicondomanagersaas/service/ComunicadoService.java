@@ -9,6 +9,7 @@ import br.com.doistech.apicondomanagersaas.mapper.ComunicadoMapper;
 import br.com.doistech.apicondomanagersaas.repository.ComunicadoRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -20,7 +21,9 @@ public class ComunicadoService {
     private final ComunicadoRepository repository;
     private final CondominioService condominioService;
     private final ComunicadoMapper mapper;
+    private final ComunicadoEmailService comunicadoEmailService;
 
+    @Transactional
     public ComunicadoResponse create(ComunicadoCreateRequest req) {
         var now = LocalDateTime.now();
 
@@ -39,9 +42,12 @@ public class ComunicadoService {
                 .updatedAt(now)
                 .build();
 
-        return mapper.toResponse(repository.save(entity));
+        Comunicado saved = repository.save(entity);
+        comunicadoEmailService.sendPublishedNotification(saved);
+        return mapper.toResponse(saved);
     }
 
+    @Transactional
     public ComunicadoResponse update(Long id, Long condominioId, ComunicadoUpdateRequest req) {
         Comunicado entity = getEntity(id, condominioId);
 
@@ -56,7 +62,9 @@ public class ComunicadoService {
         entity.setDataExpiracao(req.dataExpiracao());
         entity.setUpdatedAt(LocalDateTime.now());
 
-        return mapper.toResponse(repository.save(entity));
+        Comunicado saved = repository.save(entity);
+        comunicadoEmailService.sendPublishedNotification(saved);
+        return mapper.toResponse(saved);
     }
 
     public ComunicadoResponse getById(Long id, Long condominioId) {

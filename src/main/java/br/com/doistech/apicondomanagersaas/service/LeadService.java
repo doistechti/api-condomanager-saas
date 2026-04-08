@@ -43,6 +43,7 @@ public class LeadService {
     private final CondominioRepository condominioRepository;
     private final PlanoRepository planoRepository;
     private final AssinaturaRepository assinaturaRepository;
+    private final LeadEmailService leadEmailService;
 
     /**
      * Duração padrão do Trial (dias). Mantido simples e configurável.
@@ -91,6 +92,8 @@ public class LeadService {
                 .build();
         usuario.setRoles(roleSet);
         usuarioRepository.save(usuario);
+
+        leadEmailService.sendLeadCreatedEmails(savedLead);
 
         return toResponse(savedLead);
     }
@@ -153,6 +156,7 @@ public class LeadService {
         // atualiza lead
         lead.setStatus(LeadStatus.TRIAL_LIBERADO);
         Lead savedLead = repository.save(lead);
+        leadEmailService.sendTrialReleasedEmail(savedLead, savedCondominio, assinatura);
 
         return toResponse(savedLead);
     }
@@ -210,4 +214,3 @@ public class LeadService {
         return email.trim().toLowerCase();
     }
 }
-

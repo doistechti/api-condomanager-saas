@@ -5,6 +5,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Optional;
 
 public interface UsuarioRepository extends JpaRepository<Usuario, Long> {
@@ -28,4 +29,16 @@ public interface UsuarioRepository extends JpaRepository<Usuario, Long> {
     Optional<Usuario> findByResetSenhaTokenHash(String resetSenhaTokenHash);
 
     boolean existsByEmail(String email);
+
+    @Query("""
+        select distinct u.email
+        from Usuario u
+        join u.roles r
+        where u.condominioId = :condominioId
+          and u.ativo = true
+          and r.nome = 'ADMIN_CONDOMINIO'
+          and u.email is not null
+          and trim(u.email) <> ''
+    """)
+    List<String> findActiveAdminEmailsByCondominioId(Long condominioId);
 }

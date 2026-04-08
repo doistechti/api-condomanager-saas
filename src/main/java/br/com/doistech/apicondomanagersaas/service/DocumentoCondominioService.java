@@ -10,6 +10,7 @@ import br.com.doistech.apicondomanagersaas.repository.DocumentoCondominioReposit
 import br.com.doistech.apicondomanagersaas.service.storage.S3StorageService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -22,7 +23,9 @@ public class DocumentoCondominioService {
     private final CondominioService condominioService;
     private final DocumentoMapper mapper;
     private final S3StorageService storageService;
+    private final DocumentoEmailService documentoEmailService;
 
+    @Transactional
     public DocumentoResponse create(DocumentoCreateRequest req) {
         DocumentoCondominio entity = DocumentoCondominio.builder()
                 .condominio(condominioService.getEntity(req.condominioId()))
@@ -36,9 +39,12 @@ public class DocumentoCondominioService {
                 .updatedAt(LocalDateTime.now())
                 .build();
 
-        return mapper.toResponse(repository.save(entity));
+        DocumentoCondominio saved = repository.save(entity);
+        documentoEmailService.sendPublishedNotification(saved);
+        return mapper.toResponse(saved);
     }
 
+    @Transactional
     public DocumentoResponse update(Long id, Long condominioId, DocumentoUpdateRequest req) {
         DocumentoCondominio entity = getEntity(id, condominioId);
         entity.setNome(req.nome());
@@ -46,7 +52,9 @@ public class DocumentoCondominioService {
         entity.setCategoria(req.categoria());
         entity.setAtivo(req.ativo() == null ? entity.getAtivo() : req.ativo());
         entity.setUpdatedAt(LocalDateTime.now());
-        return mapper.toResponse(repository.save(entity));
+        DocumentoCondominio saved = repository.save(entity);
+        documentoEmailService.sendPublishedNotification(saved);
+        return mapper.toResponse(saved);
     }
 
     public DocumentoResponse getById(Long id, Long condominioId) {

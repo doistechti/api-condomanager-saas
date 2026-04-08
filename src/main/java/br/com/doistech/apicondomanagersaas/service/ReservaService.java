@@ -11,6 +11,7 @@ import br.com.doistech.apicondomanagersaas.mapper.ReservaMapper;
 import br.com.doistech.apicondomanagersaas.repository.ReservaRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -26,7 +27,9 @@ public class ReservaService {
     private final EspacoService espacoService;
     private final VinculoUnidadeService vinculoService;
     private final ReservaMapper mapper;
+    private final ReservaEmailService reservaEmailService;
 
+    @Transactional
     public ReservaResponse create(ReservaCreateRequest req) {
         var espaco = espacoService.getEntity(req.espacoId(), req.condominioId());
         var vinculo = vinculoService.getEntity(req.vinculoId(), req.condominioId());
@@ -54,11 +57,15 @@ public class ReservaService {
                 .updatedAt(LocalDateTime.now())
                 .build();
 
-        return mapper.toResponse(repository.save(entity));
+        Reserva saved = repository.save(entity);
+        reservaEmailService.sendCreatedNotifications(saved);
+        return mapper.toResponse(saved);
     }
 
+    @Transactional
     public ReservaResponse updateStatus(Long id, Long condominioId, ReservaUpdateRequest req) {
         Reserva entity = getEntity(id, condominioId);
+        ReservaStatus previousStatus = entity.getStatus();
 
         if (req.status() != null) {
             entity.setStatus(req.status());
@@ -67,7 +74,12 @@ public class ReservaService {
         entity.setObservacoes(req.observacoes());
         entity.setUpdatedAt(LocalDateTime.now());
 
-        return mapper.toResponse(repository.save(entity));
+        Reserva saved = repository.save(entity);
+        if (req.status() != null && req.status() != previousStatus) {
+            reservaEmailService.sendStatusUpdatedNotifications(saved);
+        }
+
+        return mapper.toResponse(saved);
     }
 
     public ReservaResponse getById(Long id, Long condominioId) {
@@ -83,8 +95,13 @@ public class ReservaService {
                 .stream().map(mapper::toResponse).toList();
     }
 
+    @Transactional
     public void delete(Long id, Long condominioId) {
-        repository.delete(getEntity(id, condominioId));
+        Reserva entity = getEntity(id, condominioId);
+        entity.setStatus(ReservaStatus.CANCELADA);
+        entity.setUpdatedAt(LocalDateTime.now());
+        reservaEmailService.sendCancelledNotifications(entity);
+        repository.delete(entity);
     }
 
     private Reserva getEntity(Long id, Long condominioId) {

@@ -9,6 +9,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 
@@ -19,6 +20,10 @@ public interface AssinaturaRepository extends JpaRepository<Assinatura, Long> {
     Optional<Assinatura> findTopByCondominioIdOrderByDataVencimentoDesc(Long condominioId);
 
     Optional<Assinatura> findTopByCondominioIdAndStatusOrderByDataVencimentoDesc(Long condominioId, AssinaturaStatus status);
+
+    List<Assinatura> findAllByStatusAndDataVencimento(AssinaturaStatus status, LocalDate dataVencimento);
+
+    List<Assinatura> findAllByStatusAndDataVencimentoBefore(AssinaturaStatus status, LocalDate dataVencimento);
 
     // ---- Dashboard Admin-SaaS ----
     long countByStatus(AssinaturaStatus status);
