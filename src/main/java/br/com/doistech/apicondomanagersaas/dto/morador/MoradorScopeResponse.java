@@ -8,6 +8,7 @@ public record MoradorScopeResponse(
         String condominioNome,
         Long pessoaId,
         Long vinculoPrincipalId,
-        List<Long> unidadeIds
+        List<Long> unidadeIds,
+        List<Long> unidadeIdsGerenciaveis
 ) {
 }

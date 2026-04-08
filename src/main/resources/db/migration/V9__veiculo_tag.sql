@@ -1,0 +1,2 @@
+ALTER TABLE veiculos
+  ADD COLUMN tag VARCHAR(50) NULL AFTER placa;

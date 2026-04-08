@@ -59,13 +59,21 @@ public class MoradorScopeService {
                 .sorted()
                 .toList();
 
+        List<Long> unidadeIdsGerenciaveis = vinculos.stream()
+                .filter(v -> Boolean.TRUE.equals(v.getPrincipal()))
+                .map(v -> v.getUnidade().getId())
+                .distinct()
+                .sorted()
+                .toList();
+
         return new MoradorScopeResponse(
                 usuario.getId(),
                 usuario.getCondominioId(),
                 condominio.getNome(),
                 principal.getPessoa().getId(),
                 vinculoPrincipalId,
-                unidadeIds
+                unidadeIds,
+                unidadeIdsGerenciaveis
         );
     }
 

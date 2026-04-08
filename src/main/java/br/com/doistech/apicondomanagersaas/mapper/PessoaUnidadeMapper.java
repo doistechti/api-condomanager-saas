@@ -15,6 +15,8 @@ public interface PessoaUnidadeMapper {
     @Mapping(target = "cpfCnpj", source = "pessoa.cpfCnpj")
     @Mapping(target = "email", source = "pessoa.email")
     @Mapping(target = "telefone", source = "pessoa.telefone")
+    @Mapping(target = "fotoUrl", source = "pessoa.fotoUrl")
+    @Mapping(target = "fotoNome", source = "pessoa.fotoNome")
 
     @Mapping(target = "usuarioId", expression = "java(entity.getUsuario() != null ? entity.getUsuario().getId() : null)")
     @Mapping(target = "conviteEnviadoEm", source = "conviteEnviadoEm")

@@ -4,6 +4,7 @@ import jakarta.validation.constraints.NotBlank;
 
 public record VeiculoUpdateRequest(
         @NotBlank String placa,
+        String tag,
         String modelo,
         String cor,
         String tipo

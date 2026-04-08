@@ -21,7 +21,15 @@ public class VeiculoController {
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     public VeiculoResponse create(@PathVariable Long condominioId, @Valid @RequestBody VeiculoCreateRequest req) {
-        VeiculoCreateRequest fixed = new VeiculoCreateRequest(condominioId, req.pessoaId(), req.placa(), req.modelo(), req.cor(), req.tipo());
+        VeiculoCreateRequest fixed = new VeiculoCreateRequest(
+                condominioId,
+                req.pessoaId(),
+                req.placa(),
+                req.tag(),
+                req.modelo(),
+                req.cor(),
+                req.tipo()
+        );
         return service.create(fixed);
     }
 

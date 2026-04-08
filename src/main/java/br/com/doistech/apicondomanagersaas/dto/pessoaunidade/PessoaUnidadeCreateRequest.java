@@ -20,6 +20,8 @@ public record PessoaUnidadeCreateRequest(
         String cpfCnpj,
         String email,
         String telefone,
+        String fotoUrl,
+        String fotoNome,
 
         @NotNull
         @JsonAlias({"isProprietario", "proprietario", "is_owner", "owner", "titular"})

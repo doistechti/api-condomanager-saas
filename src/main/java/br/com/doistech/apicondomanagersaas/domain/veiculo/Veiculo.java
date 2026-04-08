@@ -35,6 +35,7 @@ public class Veiculo {
     @Column(nullable = false)
     private String placa;
 
+    private String tag;
     private String modelo;
     private String cor;
 

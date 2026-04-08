@@ -16,6 +16,8 @@ public record PessoaUnidadeResponse(
         String cpfCnpj,
         String email,
         String telefone,
+        String fotoUrl,
+        String fotoNome,
 
         Boolean ehProprietario,
         Boolean ehMorador,

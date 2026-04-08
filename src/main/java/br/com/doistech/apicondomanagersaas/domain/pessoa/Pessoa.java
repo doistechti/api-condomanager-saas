@@ -28,6 +28,8 @@ public class Pessoa {
 
     private String email;
     private String telefone;
+    private String fotoUrl;
+    private String fotoNome;
 
     @Column(nullable = false)
     private Boolean ativo = true;
@@ -39,4 +41,3 @@ public class Pessoa {
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 }
-

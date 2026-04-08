@@ -5,6 +5,7 @@ public record VeiculoResponse(
         Long condominioId,
         Long pessoaId,
         String placa,
+        String tag,
         String modelo,
         String cor,
         String tipo

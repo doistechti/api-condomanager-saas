@@ -96,6 +96,7 @@ public class MoradorVeiculoService {
                 .condominio(condominio)
                 .pessoa(pessoa)
                 .placa(placa)
+                .tag(req.tag())
                 .modelo(req.modelo())
                 .cor(req.cor())
                 .tipo(req.tipo() == null ? "carro" : req.tipo())
@@ -122,6 +123,7 @@ public class MoradorVeiculoService {
         }
 
         v.setPlaca(placa);
+        v.setTag(req.tag());
         v.setModelo(req.modelo());
         v.setCor(req.cor());
         v.setTipo(req.tipo());

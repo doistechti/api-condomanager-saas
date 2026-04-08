@@ -39,6 +39,8 @@ public class ProprietarioController {
                 req.cpfCnpj(),
                 req.email(),
                 req.telefone(),
+                req.fotoUrl(),
+                req.fotoNome(),
                 true,   // ehProprietario
                 false,  // ehMorador
                 null,   // moradorTipo
@@ -61,6 +63,8 @@ public class ProprietarioController {
                 req.cpfCnpj(),
                 req.email(),
                 req.telefone(),
+                req.fotoUrl(),
+                req.fotoNome(),
                 true,   // ehProprietario
                 false,  // ehMorador
                 null,   // moradorTipo

@@ -115,6 +115,10 @@ public class PessoaUnidadeService {
         if (req.cpfCnpj() != null) p.setCpfCnpj(req.cpfCnpj());
         if (req.email() != null) p.setEmail(req.email());
         if (req.telefone() != null) p.setTelefone(req.telefone());
+        if (req.fotoUrl() != null || req.fotoNome() != null) {
+            p.setFotoUrl(req.fotoUrl());
+            p.setFotoNome(req.fotoNome());
+        }
         p.setUpdatedAt(LocalDateTime.now());
         pessoaRepository.save(p);
 
@@ -239,6 +243,8 @@ public class PessoaUnidadeService {
         p.setCpfCnpj(req.cpfCnpj());
         p.setEmail(req.email());
         p.setTelefone(req.telefone());
+        p.setFotoUrl(req.fotoUrl());
+        p.setFotoNome(req.fotoNome());
         p.setAtivo(true);
         p.setCreatedAt(LocalDateTime.now());
         p.setUpdatedAt(LocalDateTime.now());

@@ -7,6 +7,7 @@ public record VeiculoCreateRequest(
         @NotNull Long condominioId,
         @NotNull Long pessoaId,
         @NotBlank String placa,
+        String tag,
         String modelo,
         String cor,
         String tipo

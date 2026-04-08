@@ -8,6 +8,7 @@ import jakarta.validation.constraints.NotBlank;
  */
 public record MoradorVeiculoCreateRequest(
         @NotBlank String placa,
+        String tag,
         String modelo,
         String cor,
         String tipo

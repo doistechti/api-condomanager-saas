@@ -1,25 +1,33 @@
 package br.com.doistech.apicondomanagersaas.controller;
 
 import br.com.doistech.apicondomanagersaas.common.exception.BadRequestException;
+import br.com.doistech.apicondomanagersaas.dto.documento.UploadResponse;
 import br.com.doistech.apicondomanagersaas.domain.pessoaUnidade.MoradorTipo;
 import br.com.doistech.apicondomanagersaas.dto.pessoaunidade.PessoaUnidadeCreateRequest;
 import br.com.doistech.apicondomanagersaas.dto.pessoaunidade.PessoaUnidadeResponse;
 import br.com.doistech.apicondomanagersaas.dto.pessoaunidade.PessoaUnidadeUpdateRequest;
 import br.com.doistech.apicondomanagersaas.service.PessoaUnidadeService;
+import br.com.doistech.apicondomanagersaas.service.storage.S3StorageService;
+import br.com.doistech.apicondomanagersaas.service.storage.StoragePathService;
+import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
+import java.util.Set;
 
 @RestController
 @RequestMapping("/api/v1/condominios/{condominioId}/moradores")
+@RequiredArgsConstructor
 public class MoradorController {
 
-    private final PessoaUnidadeService service;
+    private static final Set<String> ALLOWED_EXT = Set.of("png", "jpg", "jpeg", "webp");
+    private static final long MAX_SIZE = 10L * 1024L * 1024L;
 
-    public MoradorController(PessoaUnidadeService service) {
-        this.service = service;
-    }
+    private final PessoaUnidadeService service;
+    private final S3StorageService storageService;
+    private final StoragePathService storagePathService;
 
     @GetMapping
     public ResponseEntity<List<PessoaUnidadeResponse>> listar(@PathVariable Long condominioId) {
@@ -45,6 +53,8 @@ public class MoradorController {
                 req.cpfCnpj(),
                 req.email(),
                 req.telefone(),
+                req.fotoUrl(),
+                req.fotoNome(),
                 isTipoProprietario,
                 true,
                 moradorTipo,
@@ -73,6 +83,8 @@ public class MoradorController {
                 req.cpfCnpj(),
                 req.email(),
                 req.telefone(),
+                req.fotoUrl(),
+                req.fotoNome(),
                 isTipoProprietario,
                 true,
                 moradorTipo,
@@ -93,6 +105,18 @@ public class MoradorController {
     @PostMapping("/{id}/convite")
     public ResponseEntity<PessoaUnidadeResponse> enviarConvite(@PathVariable Long condominioId, @PathVariable Long id) {
         return ResponseEntity.ok(service.enviarConvite(id, condominioId));
+    }
+
+    @PostMapping("/upload")
+    public UploadResponse upload(@PathVariable Long condominioId, @RequestParam("file") MultipartFile file) {
+        var stored = storageService.upload(
+                file,
+                storagePathService.condominioModuleFolder(condominioId, "moradores"),
+                "morador",
+                ALLOWED_EXT,
+                MAX_SIZE
+        );
+        return new UploadResponse(stored.url(), stored.fileName(), stored.contentType(), stored.size());
     }
 
     private void validateCreateRequest(PessoaUnidadeCreateRequest req) {

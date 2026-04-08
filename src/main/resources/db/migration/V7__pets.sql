@@ -1,0 +1,22 @@
+CREATE TABLE pets (
+  id BIGINT NOT NULL AUTO_INCREMENT,
+  condominio_id BIGINT NOT NULL,
+  unidade_id BIGINT NOT NULL,
+  nome VARCHAR(120) NOT NULL,
+  tipo VARCHAR(60) NOT NULL,
+  raca VARCHAR(120) NULL,
+  porte VARCHAR(60) NULL,
+  cor VARCHAR(80) NULL,
+  data_nascimento DATE NULL,
+  observacoes LONGTEXT NULL,
+  foto_url VARCHAR(1024) NULL,
+  foto_nome VARCHAR(255) NULL,
+  created_at DATETIME NULL,
+  updated_at DATETIME NULL,
+  PRIMARY KEY (id),
+  KEY idx_pets_condominio (condominio_id),
+  KEY idx_pets_unidade (unidade_id),
+  KEY idx_pets_nome (nome),
+  CONSTRAINT fk_pets_condominio FOREIGN KEY (condominio_id) REFERENCES condominios(id),
+  CONSTRAINT fk_pets_unidade FOREIGN KEY (unidade_id) REFERENCES unidades(id)
+) ENGINE=InnoDB;

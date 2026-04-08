@@ -27,7 +27,7 @@ public class PessoaUnidadeController {
                 condominioId,
                 req.unidadeId(),
                 req.pessoaId(),
-                req.nome(), req.cpfCnpj(), req.email(), req.telefone(),
+                req.nome(), req.cpfCnpj(), req.email(), req.telefone(), req.fotoUrl(), req.fotoNome(),
                 req.ehProprietario(), req.ehMorador(), req.moradorTipo(), req.principal(),
                 req.dataInicio(), req.dataFim()
         );
@@ -65,4 +65,3 @@ public class PessoaUnidadeController {
         service.delete(id, condominioId);
     }
 }
-

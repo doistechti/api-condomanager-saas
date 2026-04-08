@@ -27,6 +27,7 @@ public class VeiculoService {
                 .condominio(condominioService.getEntity(req.condominioId()))
                 .pessoa(pessoaService.getEntity(req.pessoaId(), req.condominioId()))
                 .placa(req.placa())
+                .tag(req.tag())
                 .modelo(req.modelo())
                 .cor(req.cor())
                 .tipo(req.tipo())
@@ -40,6 +41,7 @@ public class VeiculoService {
     public VeiculoResponse update(Long id, Long condominioId, VeiculoUpdateRequest req) {
         Veiculo entity = getEntity(id, condominioId);
         entity.setPlaca(req.placa());
+        entity.setTag(req.tag());
         entity.setModelo(req.modelo());
         entity.setCor(req.cor());
         entity.setTipo(req.tipo());
