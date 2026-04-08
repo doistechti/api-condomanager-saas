@@ -24,6 +24,7 @@ public class DocumentoCondominioService {
     private final DocumentoMapper mapper;
     private final S3StorageService storageService;
     private final DocumentoEmailService documentoEmailService;
+    private final DocumentoPushNotificationService documentoPushNotificationService;
 
     @Transactional
     public DocumentoResponse create(DocumentoCreateRequest req) {
@@ -41,6 +42,7 @@ public class DocumentoCondominioService {
 
         DocumentoCondominio saved = repository.save(entity);
         documentoEmailService.sendPublishedNotification(saved);
+        documentoPushNotificationService.sendPublishedNotification(saved);
         return mapper.toResponse(saved);
     }
 
@@ -54,6 +56,7 @@ public class DocumentoCondominioService {
         entity.setUpdatedAt(LocalDateTime.now());
         DocumentoCondominio saved = repository.save(entity);
         documentoEmailService.sendPublishedNotification(saved);
+        documentoPushNotificationService.sendPublishedNotification(saved);
         return mapper.toResponse(saved);
     }
 

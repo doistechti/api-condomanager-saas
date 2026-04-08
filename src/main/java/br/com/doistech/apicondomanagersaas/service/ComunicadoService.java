@@ -22,6 +22,7 @@ public class ComunicadoService {
     private final CondominioService condominioService;
     private final ComunicadoMapper mapper;
     private final ComunicadoEmailService comunicadoEmailService;
+    private final ComunicadoPushNotificationService comunicadoPushNotificationService;
 
     @Transactional
     public ComunicadoResponse create(ComunicadoCreateRequest req) {
@@ -44,6 +45,7 @@ public class ComunicadoService {
 
         Comunicado saved = repository.save(entity);
         comunicadoEmailService.sendPublishedNotification(saved);
+        comunicadoPushNotificationService.sendPublishedNotification(saved);
         return mapper.toResponse(saved);
     }
 
@@ -64,6 +66,7 @@ public class ComunicadoService {
 
         Comunicado saved = repository.save(entity);
         comunicadoEmailService.sendPublishedNotification(saved);
+        comunicadoPushNotificationService.sendPublishedNotification(saved);
         return mapper.toResponse(saved);
     }
 

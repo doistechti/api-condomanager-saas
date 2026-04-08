@@ -28,6 +28,7 @@ public class ReservaService {
     private final VinculoUnidadeService vinculoService;
     private final ReservaMapper mapper;
     private final ReservaEmailService reservaEmailService;
+    private final ReservaPushNotificationService reservaPushNotificationService;
 
     @Transactional
     public ReservaResponse create(ReservaCreateRequest req) {
@@ -59,6 +60,7 @@ public class ReservaService {
 
         Reserva saved = repository.save(entity);
         reservaEmailService.sendCreatedNotifications(saved);
+        reservaPushNotificationService.sendCreatedNotifications(saved);
         return mapper.toResponse(saved);
     }
 
@@ -77,6 +79,7 @@ public class ReservaService {
         Reserva saved = repository.save(entity);
         if (req.status() != null && req.status() != previousStatus) {
             reservaEmailService.sendStatusUpdatedNotifications(saved);
+            reservaPushNotificationService.sendStatusUpdatedNotifications(saved);
         }
 
         return mapper.toResponse(saved);
@@ -101,6 +104,7 @@ public class ReservaService {
         entity.setStatus(ReservaStatus.CANCELADA);
         entity.setUpdatedAt(LocalDateTime.now());
         reservaEmailService.sendCancelledNotifications(entity);
+        reservaPushNotificationService.sendCancelledNotifications(entity);
         repository.delete(entity);
     }
 

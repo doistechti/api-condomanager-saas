@@ -30,6 +30,7 @@ public class OcorrenciaService {
     private final UsuarioRepository usuarioRepository;
     private final MoradorScopeService moradorScopeService;
     private final OcorrenciaEmailService ocorrenciaEmailService;
+    private final OcorrenciaPushNotificationService ocorrenciaPushNotificationService;
     private final JwtUtil jwtUtil;
     private final HttpServletRequest request;
 
@@ -258,6 +259,7 @@ public class OcorrenciaService {
         }
 
         ocorrenciaEmailService.sendCreatedNotifications(saved);
+        ocorrenciaPushNotificationService.sendCreatedNotifications(saved);
         return mapDetail(saved);
     }
 
@@ -295,6 +297,7 @@ public class OcorrenciaService {
         ocorrencia.setUpdatedAt(now);
         ocorrenciaRepository.save(ocorrencia);
         ocorrenciaEmailService.sendAdminReplyNotifications(ocorrencia, mensagem);
+        ocorrenciaPushNotificationService.sendAdminReplyNotifications(ocorrencia, mensagem);
 
         return new OcorrenciaMensagemResponse(
                 mensagem.getId(),
@@ -330,6 +333,7 @@ public class OcorrenciaService {
         ocorrencia.setUpdatedAt(now);
         ocorrenciaRepository.save(ocorrencia);
         ocorrenciaEmailService.sendMoradorReplyNotifications(ocorrencia, mensagem);
+        ocorrenciaPushNotificationService.sendMoradorReplyNotifications(ocorrencia, mensagem);
 
         return new OcorrenciaMensagemResponse(
                 mensagem.getId(),
@@ -358,6 +362,7 @@ public class OcorrenciaService {
         ocorrencia.setResolvidaEm(req.status() == OcorrenciaStatus.resolvida ? now : null);
         Ocorrencia saved = ocorrenciaRepository.save(ocorrencia);
         ocorrenciaEmailService.sendStatusUpdatedNotifications(saved);
+        ocorrenciaPushNotificationService.sendStatusUpdatedNotifications(saved);
         return mapDetail(saved);
     }
 }
