@@ -14,6 +14,7 @@ import br.com.doistech.apicondomanagersaas.dto.auth.FirstAccessPasswordRequest;
 import br.com.doistech.apicondomanagersaas.dto.auth.MoradorInviteAcceptRequest;
 import br.com.doistech.apicondomanagersaas.dto.auth.MoradorInviteResponse;
 import br.com.doistech.apicondomanagersaas.dto.auth.ForgotPasswordRequest;
+import br.com.doistech.apicondomanagersaas.dto.auth.PasswordResetProject;
 import br.com.doistech.apicondomanagersaas.dto.auth.ResetPasswordRequest;
 import br.com.doistech.apicondomanagersaas.repository.PessoaUnidadeRepository;
 import br.com.doistech.apicondomanagersaas.repository.RoleRepository;
@@ -120,7 +121,8 @@ public class AuthService {
         usuario.setResetSenhaExpiraEm(LocalDateTime.now().plusMinutes(Math.max(resetPasswordExpirationMinutes, 1)));
         usuarioRepository.save(usuario);
 
-        passwordResetEmailService.sendResetPasswordEmail(usuario, rawToken);
+        PasswordResetProject project = request.projeto() == null ? PasswordResetProject.WEB : request.projeto();
+        passwordResetEmailService.sendResetPasswordEmail(usuario, rawToken, project);
     }
 
     @Transactional
